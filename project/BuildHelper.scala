@@ -3,12 +3,10 @@ import sbt.Keys._
 
 object BuildHelper {
 
-  val pureConfigVersion = "0.10.0"
+  val pureConfigVersion = "0.12.3"
   val scalaTestVersion = "3.1.0"
   val logbackVersion = "1.2.3"
   val scalaLoggingVersion  = "3.9.2"
-  val mysqlVersion = "5.1.26"
-  val scalikejdbcVersion = "3.4.1"
 
   private val stdOptions = Seq(
     "-deprecation",
