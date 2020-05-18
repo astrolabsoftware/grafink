@@ -1,0 +1,55 @@
+#!/bin/bash
+
+source ~/.bashrc
+
+if [ $# -le 8 ]; then
+  echo "Usage: --config <config-file>
+  exit 1
+fi
+
+VARS=$@
+
+# Parse config and rules file paths
+while test $# -gt 0
+do
+  case "$1" in
+    --config)
+      shift
+      CONF_FILE_PATH=$1;;
+  esac
+  shift
+done
+
+# Convert file paths to their basenames, since spark on yarn just needs base names to refer to these files
+CONF_FILE=$(basename $CONF_FILE_PATH)
+
+VARS=${VARS/$CONF_FILE_PATH/$CONF_FILE}
+
+lib_dir=$(cd "$(dirname ${BASH_SOURCE[0]})"/..; pwd)
+
+${{template_declares}}
+
+KRB5_CONF=""
+
+LOG_FILE=$lib_dir/run.out
+
+echo "Running spark-submit..."
+
+spark-submit \
+--master yarn \
+--deploy-mode cluster \
+--queue common-spark \
+--driver-memory 8g \
+--driver-cores 4 \
+--num-executors 5 \
+--executor-memory 2g \
+--executor-cores 4 \
+--files $CONF_FILE_PATH \
+--conf spark.rdd.compress=true \
+--conf spark.executor.heartbeatInterval=120s \
+--conf spark.yarn.executor.memoryOverhead=1g \
+--conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
+--conf spark.driver.extraJavaOptions="-XX:+UseConcMarkSweepGC" \
+--conf spark.executor.extraJavaOptions="-XX:+UseConcMarkSweepGC" \
+--class ${{app_mainclass}} \
+$lib_dir/$JARNAME $VARS
