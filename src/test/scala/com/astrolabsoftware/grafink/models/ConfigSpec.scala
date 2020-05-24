@@ -14,53 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.astrolabsoftware.grafink
+package com.astrolabsoftware.grafink.models
 
 import java.io.File
 
-import buildinfo.BuildInfo
 import com.typesafe.config.ConfigFactory
-import org.apache.spark.sql.SparkSession
+import org.scalatest.EitherValues
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 import pureconfig._
 import pureconfig.generic.ProductHint
 import pureconfig.generic.auto._
 
-import com.astrolabsoftware.grafink.models.ReaderConfig
-
-object Boot {
+class ConfigSpec extends AnyFunSuite with Matchers with EitherValues {
 
   // For pure config to be able to use camel case
   implicit def hint[T]: ProductHint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
 
-  def main(args: Array[String]): Unit = {
-    val clParser = new CLParser {}
-    val parser = clParser.parseOptions
+  test("ReaderConfig is parsed correctly") {
+    val path = getClass.getResource("/application.conf").getPath
+    val conf = ConfigFactory.parseFile(new File(path))
 
-    parser.parse(
-      args,
-      ArgsConfig(confFile = "application.conf")
-    ) match {
-      case Some(config) =>
-        implicit val spark = SparkSession
-          .builder()
-          .appName(BuildInfo.name)
-          .getOrCreate()
-        try {
-
-          // Get conf
-          val conf = ConfigFactory.parseFile(new File(config.confFile))
-
-          for {
-            readerConf <- ConfigSource.fromConfig(conf).at("reader").load[ReaderConfig]
-
-          } yield {
-
-          }
-
-        } finally {
-          spark.stop()
-        }
-      case None =>
-    }
+    val readerConfig = ConfigSource.fromConfig(conf).at("reader").load[ReaderConfig]
+    readerConfig.right.value.basePath should be ("/test/base/path")
   }
 }
