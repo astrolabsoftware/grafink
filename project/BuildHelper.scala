@@ -20,7 +20,8 @@ import sbt.Keys._
 object BuildHelper {
 
   val pureConfigVersion = "0.12.3"
-  val sparkVersion = ""
+  val sparkVersion = "2.4.5"
+  val scoptVersion = "3.7.1"
 
   val scalaTestVersion = "3.1.0"
   val logbackVersion = "1.2.3"
@@ -42,7 +43,7 @@ object BuildHelper {
 
   lazy val basicSettings = Seq(
     resolvers ++= Seq(
-      Resolver.sonatypeRepo("public")
+      "central" at "https://repo1.maven.org/maven2/"
     )
   ) ++ testSettings
 
@@ -53,8 +54,11 @@ object BuildHelper {
         "com.github.pureconfig" %% "pureconfig" % pureConfigVersion excludeAll (
           ExclusionRule(organization = "org.scala-lang")
         ),
+        "com.github.scopt" %% "scopt" % scoptVersion,
         "ch.qos.logback" % "logback-classic" % logbackVersion,
-        "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingVersion
+        "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingVersion,
+        "org.apache.spark" %% "spark-core" % sparkVersion,
+        "org.apache.spark" %% "spark-sql" % sparkVersion
       )
   ) ++ basicSettings
 }

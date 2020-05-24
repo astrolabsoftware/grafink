@@ -13,4 +13,7 @@ lazy val compileScalastyle = taskKey[Unit]("compileScalastyle")
 compileScalastyle := scalastyle.in(Compile).toTask("").value
 (compile in Compile) := ((compile in Compile) dependsOn compileScalastyle).value
 
+enablePlugins(BuildInfoPlugin, JavaAppPackaging)
+
 lazy val root = (project in file(".")).settings(stdSettings)
+
