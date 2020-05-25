@@ -23,6 +23,10 @@ case class ArgsConfig(confFile: String)
 
 trait CLParser {
 
+  /**
+   *  This will parse the command line options
+   * @return An OptionParser structure that contains the successfully parsed ArgsConfig or default
+   */
   def parseOptions(): OptionParser[ArgsConfig] =
     new scopt.OptionParser[ArgsConfig]("janusloader") {
       head("janusloader", BuildInfo.version)
