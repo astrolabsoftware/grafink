@@ -135,7 +135,7 @@ The above row will be translated into graph data model as follows:
 
 ### Edges
 - Create an edge between all the vertices that have same ```link``` properties.
-- Definition of same property will vary, and will be controlled by some rules, for eg:
+- Definition of 'same' property will vary, and will be controlled by some rules, for eg:
    - String properties would be considered same if they are equal
    - ML properties might be considered same if they are below a threshold or within the same range etc.
 
@@ -160,8 +160,17 @@ The above row will be translated into graph data model as follows:
 
 It seems it is better to go with directed edges since support for unidirected edges is limited (https://docs.janusgraph.org/advanced-topics/advschema/)
 
+Ans: Edges will be Unidirectional
+
 2. Do we connect the vertices because they have the same property or the property and their values must match as well?
+
+Ans: Depends on property and rules associated with it (or its type)
 
 3. What properties to create indices on?
 
+Ans: TBD
+
 4. Do we create the edges only for vertices being loaded for the current batch job or we want to connect the new alerts (add edges) with the existing alerts (vertices) in Janusgraph?
+
+Ans: We want to connect old vertices as well. 
+This might be very slow as we have to return a lot of vertices based on our ```link``` properties and add edges to each of them.
