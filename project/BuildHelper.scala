@@ -20,20 +20,13 @@ import sbt.Keys._
 object BuildHelper {
 
   val pureConfigVersion = "0.12.3"
+  val catsVersion = "2.0.0"
   val sparkVersion = "2.4.5"
   val scoptVersion = "3.7.1"
 
   val scalaTestVersion = "3.1.0"
   val logbackVersion = "1.2.3"
   val scalaLoggingVersion  = "3.9.2"
-
-  private val stdOptions = Seq(
-    "-deprecation",
-    "-encoding",
-    "UTF-8",
-    "-feature",
-    "-unchecked"
-  )
 
   lazy val testSettings = Seq(
     libraryDependencies ++= Seq(
@@ -55,6 +48,7 @@ object BuildHelper {
           ExclusionRule(organization = "org.scala-lang")
         ),
         "com.github.scopt" %% "scopt" % scoptVersion,
+        "org.typelevel" %% "cats-core" % catsVersion,
         "ch.qos.logback" % "logback-classic" % logbackVersion,
         "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingVersion,
         "org.apache.spark" %% "spark-core" % sparkVersion,

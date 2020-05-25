@@ -7,7 +7,7 @@ ThisBuild / version          := "0.1.0-SNAPSHOT"
 ThisBuild / organization     := "com.astrolabsoftware"
 ThisBuild / organizationName := "astrolabsoftware"
 
-scalacOptions ++= Seq("-Ypartial-unification", "-deprecation", "-feature", "-Ywarn-unused:imports")
+scalacOptions ++= Seq("-Ypartial-unification", "-deprecation")
 
 lazy val compileScalastyle = taskKey[Unit]("compileScalastyle")
 compileScalastyle := scalastyle.in(Compile).toTask("").value
@@ -15,9 +15,22 @@ compileScalastyle := scalastyle.in(Compile).toTask("").value
 
 enablePlugins(BuildInfoPlugin, JavaAppPackaging)
 
-lazy val root = (project in file(".")).settings(stdSettings)
+lazy val root =
+  (project in file("."))
+    .settings(
+      // Add support for scala version 2.11
+      crossScalaVersions := Seq("2.11.11", (ThisBuild / scalaVersion).value),
+      stdSettings
+    )
 
 assemblyJarName in assembly := s"${name.value}-${version.value}.jar"
+
+// https://github.com/circe/circe/issues/713
+// https://stackoverflow.com/questions/43611147/spark-not-working-with-pureconfig
+assemblyShadeRules in assembly := Seq(
+  ShadeRule.rename("shapeless.**" -> "shadeshapless.@1").inAll,
+  ShadeRule.rename("io.netty.**" -> "shadenetty.@1").inAll
+)
 
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", xs @ _*) => MergeStrategy.discard

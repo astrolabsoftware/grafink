@@ -19,6 +19,7 @@ package com.astrolabsoftware.grafink
 import java.io.File
 
 import buildinfo.BuildInfo
+import cats.implicits._
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.SparkSession
 import pureconfig._
