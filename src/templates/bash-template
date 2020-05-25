@@ -15,8 +15,8 @@
 # limitations under the License.
 set -e
 
-if [ $# -le 8 ]; then
-  echo "Usage: --config <config-file>
+if [ $# -le 1 ]; then
+  echo "Usage: --config <config-file>"
   exit 1
 fi
 
