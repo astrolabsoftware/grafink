@@ -4,6 +4,7 @@ This documents describes the schema modelling for JanusGraph, when alerts are be
 
 A single alert row has the following fields in hbase
 
+Note that this schema is subject to evolution.
 ```
 key: ZTF19acmbtud_2458789.0279514_128.2831039_15.3663548
 <ColumnFamily>:<ColumnName>:value
@@ -124,7 +125,7 @@ The above row will be translated into graph data model as follows:
 
 ### Vertices
 - Every alert (single row in hbase) will be modelled as a graph vertex.
-- Following alert properties will be modelled as vertex labels
+- Following alert properties will be modelled as vertex properties hereby referred to as ```link properties```
     - Supernova Random Forest classification ```(d:rfscore)```
     - Supernova Bayesian Neural Network classification ```(d:snn)``` [coming soon]
     - Microlensing Random Forest classification ```(d:mulens_class_i)``` [coming soon]
@@ -133,20 +134,25 @@ The above row will be translated into graph data model as follows:
     - The object ID itself if we use individual alerts ```(i:objectId)```
 
 ### Edges
-- Create an edge between all the vertices that have same properties
-- So if Vertex 1 has ```(d:rfscore)``` property and Vertex 5 also has the same property, we will create an edge between them.
-
+- Create an edge between all the vertices that have same ```link``` properties.
+- Definition of same property will vary, and will be controlled by some rules, for eg:
+   - String properties would be considered same if they are equal
+   - ML properties might be considered same if they are below a threshold or within the same range etc.
 
 ### Data Insertion Algorithm (might change based on answers to the questions)
 
 - Start by creating the schema in janusgraph if it does not exist
    This will involve creating 
-   - vertex labels (cf:columnname in hbase row)
-   - edge labels (not sure what will be the edge label exactly)
-   - property keys
+   - Vertex Labels
+     Each vertex will have one label which is a kind of its 'type'.
+   - Edge Labels (not sure what will be the edge label exactly)
+   - Property Keys
         - Vertex property ```Rowkey```
-- Read all the rows, group by the interesting columnnames (alert properties). Vertices in each group become ```cliques``` of the graph, since each of them needs to be connected to all the others in the group. Load all these as vertices of the graph and add the labels and properties.
-- Then for each of these groups, load edges, using the same ```Dataframe``` and add labels.
+        - All ```link``` properties as vertex properties as described above.
+- Read all the rows, group by the interesting columnnames (link properties). Vertices in each group become ```cliques``` of the graph, since each of them needs to be connected to all the others in the group. Load all these as vertices of the graph and add the label and properties.
+- Then for each of these groups:
+   - Search for all vertices with the same link properties.
+   - For each vertex in the group, add edges to all the searched vertices.
 - Create indexes
 
 ### Questions
