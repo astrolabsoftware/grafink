@@ -28,6 +28,9 @@ import pureconfig.generic.auto._
 
 import com.astrolabsoftware.grafink.models.ReaderConfig
 
+/**
+ * Contains the entry point to the spark job
+ */
 object Boot {
 
   // For pure config to be able to use camel case

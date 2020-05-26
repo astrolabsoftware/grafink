@@ -21,7 +21,7 @@ object BuildHelper {
 
   val pureConfigVersion = "0.12.3"
   val catsVersion = "2.0.0"
-  val sparkVersion = "2.4.5"
+  val sparkVersion = "2.4.4"
   val scoptVersion = "3.7.1"
 
   val scalaTestVersion = "3.1.0"
