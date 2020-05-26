@@ -1,0 +1,9 @@
+bin/
+target/
+.idea/
+.cache-main
+.cache-tests
+*.log
+*.gz
+logs/
+.DS_Store

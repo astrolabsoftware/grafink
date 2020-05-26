@@ -1,0 +1,74 @@
+#!/bin/bash
+# Copyright 2020 AstroLab Software
+# Author: Yash Datta
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+set -e
+
+if [ $# -le 1 ]; then
+  echo "Usage: --config <config-file>"
+  exit 1
+fi
+
+VARS=$@
+
+# Parse config and rules file paths
+while test $# -gt 0
+do
+  case "$1" in
+    --config)
+      shift
+      CONF_FILE_PATH=$1;;
+  esac
+  shift
+done
+
+# Convert file paths to their basenames, since spark just needs base names to refer to these files
+CONF_FILE=$(basename $CONF_FILE_PATH)
+
+lib_dir=$(cd "$(dirname ${BASH_SOURCE[0]})"/../lib; pwd)
+
+${{template_declares}}
+
+KRB5_CONF=""
+
+LOG_FILE=$lib_dir/run.out
+
+echo "Running spark-submit..."
+
+DEPLOY_MODE=cluster
+if [ -z ${SPARK_MASTER} ]; then
+  echo "Running spark locally since SPARK_MASTER not defined"
+  SPARK_MASTER="local[*]"
+  DEPLOY_MODE="client"
+  CONF_FILE=$CONF_FILE_PATH
+fi
+
+VARS=${VARS/$CONF_FILE_PATH/$CONF_FILE}
+
+spark-submit \
+--master ${SPARK_MASTER} \
+--deploy-mode ${DEPLOY_MODE} \
+--driver-memory 8g \
+--driver-cores 4 \
+--num-executors 5 \
+--executor-memory 2g \
+--executor-cores 4 \
+--files $CONF_FILE_PATH \
+--conf spark.rdd.compress=true \
+--conf spark.executor.memoryOverhead=1g \
+--conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
+--conf spark.driver.extraJavaOptions="-XX:+UseConcMarkSweepGC" \
+--conf spark.executor.extraJavaOptions="-XX:+UseConcMarkSweepGC" \
+--class ${{app_mainclass}} \
+$lib_dir/$JARNAME $VARS
