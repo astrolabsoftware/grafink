@@ -36,9 +36,7 @@ done
 # Convert file paths to their basenames, since spark just needs base names to refer to these files
 CONF_FILE=$(basename $CONF_FILE_PATH)
 
-VARS=${VARS/$CONF_FILE_PATH/$CONF_FILE}
-
-lib_dir=$(cd "$(dirname ${BASH_SOURCE[0]})"/..; pwd)
+lib_dir=$(cd "$(dirname ${BASH_SOURCE[0]})"/../lib; pwd)
 
 ${{template_declares}}
 
@@ -48,9 +46,19 @@ LOG_FILE=$lib_dir/run.out
 
 echo "Running spark-submit..."
 
+DEPLOY_MODE=cluster
+if [ -z ${SPARK_MASTER} ]; then
+  echo "Running spark locally since SPARK_MASTER not defined"
+  SPARK_MASTER="local[*]"
+  DEPLOY_MODE="client"
+  CONF_FILE=$CONF_FILE_PATH
+fi
+
+VARS=${VARS/$CONF_FILE_PATH/$CONF_FILE}
+
 spark-submit \
 --master ${SPARK_MASTER} \
---deploy-mode cluster \
+--deploy-mode ${DEPLOY_MODE} \
 --driver-memory 8g \
 --driver-cores 4 \
 --num-executors 5 \
@@ -58,8 +66,7 @@ spark-submit \
 --executor-cores 4 \
 --files $CONF_FILE_PATH \
 --conf spark.rdd.compress=true \
---conf spark.executor.heartbeatInterval=120s \
---conf spark.yarn.executor.memoryOverhead=1g \
+--conf spark.executor.memoryOverhead=1g \
 --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
 --conf spark.driver.extraJavaOptions="-XX:+UseConcMarkSweepGC" \
 --conf spark.executor.extraJavaOptions="-XX:+UseConcMarkSweepGC" \

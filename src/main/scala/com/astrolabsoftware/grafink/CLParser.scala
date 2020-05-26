@@ -32,7 +32,7 @@ trait CLParser {
    */
   def parseOptions(): OptionParser[ArgsConfig] =
     new scopt.OptionParser[ArgsConfig]("janusloader") {
-      head("janusloader", BuildInfo.version)
+      head("grafink", BuildInfo.version)
 
       opt[String]('c', "config")
         .action((x, c) => c.copy(confFile = x))
