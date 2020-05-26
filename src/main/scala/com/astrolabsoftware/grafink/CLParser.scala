@@ -21,6 +21,9 @@ import scopt.OptionParser
 
 case class ArgsConfig(confFile: String)
 
+/**
+ * Command line parser for grafink
+ */
 trait CLParser {
 
   /**
