@@ -16,6 +16,7 @@
  */
 import sbt._
 import sbt.Keys._
+import scoverage.ScoverageKeys._
 
 object BuildHelper {
 
@@ -31,7 +32,17 @@ object BuildHelper {
   lazy val testSettings = Seq(
     libraryDependencies ++= Seq(
       "org.scalatest"   %% "scalatest" % scalaTestVersion % Test,
-    )
+    ),
+    // Do not execute test in parallel
+    parallelExecution in Test := false,
+    // Fail the test suite if statement coverage is < 70%
+    coverageFailOnMinimum := true,
+    // TODO: Increase this to 70+
+    coverageMinimum := 50,
+    // Put nice colors on the coverage report
+    coverageHighlighting := true,
+    // Do not publish artifact in test
+    publishArtifact in Test := false
   )
 
   lazy val basicSettings = Seq(

@@ -68,3 +68,7 @@ executableScriptName := "start.sh"
 makeBatScripts := Seq()
 
 bashScriptExtraDefines += s"""JARNAME=${(assemblyJarName in assembly).value}"""
+
+licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
+
+publishMavenStyle := true

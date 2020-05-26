@@ -1,4 +1,7 @@
 # grafink
+[![Build Status](https://travis-ci.org/astrolabsoftware/grafink.svg?branch=master)](https://travis-ci.org/astrolabsoftware/grafink)
+[![codecov](https://codecov.io/gh/astrolabsoftware/grafink/branch/master/graph/badge.svg?style=platic)](https://codecov.io/gh/astrolabsoftware/grafink)
+
 Grafink is a spark ETL job to load data into Janusgraph.
 
 ### Compiling from source

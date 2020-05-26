@@ -36,34 +36,50 @@ object Boot {
   // For pure config to be able to use camel case
   implicit def hint[T]: ProductHint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
 
-  def main(args: Array[String]): Unit = {
+  /**
+   * Parses the command line options using CLParser
+   * @param args
+   * @return Some of ArgsConfig or None if parsing fails due to invalid arguments
+   */
+  def parseArgs(args: Array[String]): Option[ArgsConfig] = {
     val clParser = new CLParser {}
     val parser = clParser.parseOptions
-
     parser.parse(
       args,
       ArgsConfig(confFile = "application.conf")
-    ) match {
+    )
+  }
+
+  /**
+   * Runs the spark job to load data into Janusgraph
+   * @param config The parsed command line options to the job
+   */
+  def runJob(config: ArgsConfig): Unit = {
+    implicit val spark = SparkSession
+      .builder()
+      .appName(BuildInfo.name)
+      .getOrCreate()
+    try {
+
+      // Get conf
+      val conf = ConfigFactory.parseFile(new File(config.confFile))
+
+      for {
+        readerConf <- ConfigSource.fromConfig(conf).at("reader").load[ReaderConfig]
+
+      } yield {
+
+      }
+
+    } finally {
+      spark.stop()
+    }
+  }
+
+  def main(args: Array[String]): Unit = {
+    parseArgs(args) match {
       case Some(config) =>
-        implicit val spark = SparkSession
-          .builder()
-          .appName(BuildInfo.name)
-          .getOrCreate()
-        try {
-
-          // Get conf
-          val conf = ConfigFactory.parseFile(new File(config.confFile))
-
-          for {
-            readerConf <- ConfigSource.fromConfig(conf).at("reader").load[ReaderConfig]
-
-          } yield {
-
-          }
-
-        } finally {
-          spark.stop()
-        }
+        runJob(config)
       case None =>
     }
   }
