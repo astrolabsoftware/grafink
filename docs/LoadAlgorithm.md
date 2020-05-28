@@ -43,7 +43,7 @@ This will involve creating
 - This means we should invoke the job with ```startDate``` param.
 - We should also control overwrite capability in case this data is already ingested?
 
-### 3. Load Vertices and Edges
+### 4. Load Vertices and Edges
 
 Every alert (single row in hbase) will be modelled as a graph vertex.
 
@@ -75,8 +75,10 @@ JanusGraph would write, if we used [Option1](#option1)
 
 - There is already an [open ticket in JanusGraph](https://github.com/JanusGraph/janusgraph/issues/885)
 - This uses the bulk loading mechanism in Hbase to achieve high write speeds
+- Example of [bulk-loading hbase using spark](https://www.opencore.com/blog/2016/10/efficient-bulk-load-of-hbase-using-spark/)
 - **But this approach cannot be used because we want to add edges to existing vertices while writing data**
   This would involve updating existing data files, by reading, modifying and rewriting them back.
+
 
 <div id="option3" />
 #### Option 3
