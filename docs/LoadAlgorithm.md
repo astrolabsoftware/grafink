@@ -158,3 +158,5 @@ This means that:
 2. Are we using defaults, or have we changed any params for JanusGraph?
 
 3. Is the parquet data to be loaded partitioned by day or any such other column?
+
+Here are certain [technical limitations](https://docs.janusgraph.org/basics/technical-limitations/) in JanusGraph
