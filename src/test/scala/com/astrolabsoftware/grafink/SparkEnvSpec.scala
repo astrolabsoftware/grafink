@@ -12,7 +12,7 @@ object SparkEnvSpec extends DefaultRunnableSpec {
   def spec: ZSpec[Environment, Failure] =
     suite("SparkEnvSpec")(
       testM("SparkEnv correctly makes a spark object") {
-        val env = SparkEnv.local()
+        val env     = SparkEnv.local()
         val appName = ZIO.access[SparkEnv](_.get).provideLayer(env).map(x => x.sparkEnv.conf.get("spark.app.name"))
         assertM(appName)(equalTo(BuildInfo.name))
       }

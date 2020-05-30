@@ -16,6 +16,9 @@
  */
 package com.astrolabsoftware.grafink
 
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
+
 import zio._
 import zio.blocking.Blocking
 import zio.config.ConfigDescriptor._
@@ -36,16 +39,21 @@ object Boot extends App {
    */
   def parseArgs(args: Array[String]): Option[ArgsConfig] = {
     val clParser = new CLParser {}
-    val parser = clParser.parseOptions
+    val parser   = clParser.parseOptions
     parser.parse(
       args,
-      ArgsConfig(confFile = "application.conf")
+      ArgsConfig(confFile = "application.conf", startDate = yesterdayDate, duration = 1)
     )
   }
 
-  val readerConfigDescription: zio.config.ConfigDescriptor[ReaderConfig] = string("basePath")(ReaderConfig.apply, ReaderConfig.unapply)
+  val yesterdayDate = LocalDate.now.minus(1, ChronoUnit.DAYS)
 
-  def getConfig[T](filePath: String, configDescriptor: zio.config.ConfigDescriptor[T])(implicit tag: Tag[T]): Layer[Throwable, config.Config[T]] =
+  val readerConfigDescription: zio.config.ConfigDescriptor[ReaderConfig] =
+    string("basePath")(ReaderConfig.apply, ReaderConfig.unapply)
+
+  def getConfig[T](filePath: String, configDescriptor: zio.config.ConfigDescriptor[T])(
+    implicit tag: Tag[T]
+  ): Layer[Throwable, config.Config[T]] =
     zio.config.Config.fromPropertiesFile(filePath, configDescriptor)
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] = {
@@ -66,7 +74,7 @@ object Boot extends App {
     program.foldM(
       {
         case f: GrafinkException => console.putStrLn(s"Failed ${f.error}").as(GrafinkException.getExitCode(f))
-        case fail => console.putStrLn(s"Failed $fail").as(ExitCode.failure)
+        case fail                => console.putStrLn(s"Failed $fail").as(ExitCode.failure)
       },
       _ => console.putStrLn(s"Succeeded").as(ExitCode.success)
     )

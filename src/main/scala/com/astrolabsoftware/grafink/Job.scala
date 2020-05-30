@@ -40,12 +40,21 @@ object Job {
    */
   val runGrafinkJob: ZIO[SparkEnv with Config[ReaderConfig] with Console with Blocking, Throwable, Unit] =
     for {
-      _ <- logProgramConfig
+      _     <- logProgramConfig
       conf  <- config[ReaderConfig]
       spark <- ZIO.access[SparkEnv](_.get.sparkEnv)
       // TODO: Insert the processing here
-      result <- ZIO.succeed("Success")
+      result <- ZIO
+        .succeed("Success")
+        .ensuring(
+          ZIO
+            .effect(spark.stop())
+            .fold(
+              failure => zio.console.putStrLn(s"Error stopping SparkSession: $failure"),
+              _ => zio.console.putStrLn(s"SparkSession stopped")
+            )
+        )
       // result  <- zio.blocking.effectBlocking()
-      _       <- zio.console.putStrLn(s"Executed something with spark ${spark.version}: $result")
+      _ <- zio.console.putStrLn(s"Executed something with spark ${spark.version}: $result")
     } yield ()
 }

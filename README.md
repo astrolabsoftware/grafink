@@ -59,5 +59,5 @@ sbt ++2.11.11 dist
 ### Running Job
 
 ```
-./bin/start.sh --config conf/application.conf
+./bin/start.sh --config conf/application.conf --startdate <yyyy-MM-dd> --duration 1
 ```

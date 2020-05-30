@@ -15,8 +15,8 @@
 # limitations under the License.
 set -e
 
-if [ $# -le 1 ]; then
-  echo "Usage: --config <config-file>"
+if [ $# -le 3 ]; then
+  echo "Usage: --config <config-file> --startdate <date> --duration <number of days>"
   exit 1
 fi
 

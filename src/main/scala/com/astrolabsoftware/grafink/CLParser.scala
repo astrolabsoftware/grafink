@@ -16,15 +16,22 @@
  */
 package com.astrolabsoftware.grafink
 
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
+import scala.util.Try
+
 import buildinfo.BuildInfo
 import scopt.OptionParser
 
-final case class ArgsConfig(confFile: String)
+final case class ArgsConfig(confFile: String, startDate: LocalDate, duration: Int)
 
 /**
- * Command line parser for grafink
+ * Command line parser for Grafink
  */
 trait CLParser {
+
+  import CLParser._
 
   /**
    *  This will parse the command line options
@@ -42,7 +49,38 @@ trait CLParser {
           else failure("Option --config must be a valid file path")
         )
         .text("config accepts path to a configuration file")
+
+      opt[String]('s', "startdate")
+        .required()
+        .action((x, c) => c.copy(startDate = LocalDate.parse(x, dateFormat)))
+        .validate(x =>
+          if (validateDate(x)) success
+          else failure("Option --startdate must be a valid date in format (yyyy-MM-dd)")
+        )
+        .text("startdate accepts start day's date for which the job needs to be run (yyyy-MM-dd)")
+
+      opt[Int]('d', "duration")
+        .optional()
+        .action((x, c) => c.copy(duration = x))
+        .validate(x =>
+          if (x > 0 && x <= 30) success
+          else failure("Option --duration must be a valid value between 1 and 30")
+        )
+        .text(
+          "duration accepts duration (# of days) for which the job needs to process the data starting from startdate"
+        )
     }
+
+  def validateDate(date: String): Boolean = Try { LocalDate.parse(date, dateFormat); true }.getOrElse(false)
+
+  def validateStartEndDate(startDate: LocalDate, endDate: Option[LocalDate]): Boolean = {
+    val newEndDate = endDate.getOrElse(startDate)
+    if (newEndDate.compareTo(startDate) >= 0) true else false
+  }
 }
 
-object CLParser {}
+object CLParser {
+
+  val dateFormat: DateTimeFormatter         = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+  def getLocalDate(date: String): LocalDate = LocalDate.parse(date, dateFormat)
+}
