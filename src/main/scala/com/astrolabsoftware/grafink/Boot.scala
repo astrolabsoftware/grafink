@@ -21,7 +21,8 @@ import zio.blocking.Blocking
 import zio.config.ConfigDescriptor._
 import zio.console.Console
 
-import com.astrolabsoftware.grafink.models.ReaderConfig
+import com.astrolabsoftware.grafink.models.{ GrafinkException, ReaderConfig }
+import com.astrolabsoftware.grafink.models.GrafinkException.BadArgumentsException
 
 /**
  * Contains the entry point to the spark job
@@ -59,11 +60,14 @@ object Boot extends App {
             SparkEnv.cluster
         )
       case None =>
-        ZIO.fail("Invalid command line arguments")
+        ZIO.fail(BadArgumentsException("Invalid command line arguments"))
     }
 
     program.foldM(
-      fail => console.putStrLn(s"Failed $fail").as(ExitCode.failure),
+      {
+        case f: GrafinkException => console.putStrLn(s"Failed ${f.error}").as(GrafinkException.getExitCode(f))
+        case fail => console.putStrLn(s"Failed $fail").as(ExitCode.failure)
+      },
       _ => console.putStrLn(s"Succeeded").as(ExitCode.success)
     )
   }

@@ -31,8 +31,8 @@ trait CLParser {
    * @return An OptionParser structure that contains the successfully parsed ArgsConfig or default
    */
   def parseOptions(): OptionParser[ArgsConfig] =
-    new scopt.OptionParser[ArgsConfig]("janusloader") {
-      head("grafink", BuildInfo.version)
+    new scopt.OptionParser[ArgsConfig](BuildInfo.name) {
+      head(BuildInfo.name, BuildInfo.version)
 
       opt[String]('c', "config")
         .action((x, c) => c.copy(confFile = x))
