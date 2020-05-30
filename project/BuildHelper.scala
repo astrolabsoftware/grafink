@@ -20,8 +20,7 @@ import scoverage.ScoverageKeys._
 
 object BuildHelper {
 
-  val pureConfigVersion = "0.12.3"
-  val catsVersion = "2.0.0"
+  val zioVersion = "1.0.0-RC20"
   val sparkVersion = "2.4.4"
   val scoptVersion = "3.7.1"
 
@@ -32,7 +31,10 @@ object BuildHelper {
   lazy val testSettings = Seq(
     libraryDependencies ++= Seq(
       "org.scalatest"   %% "scalatest" % scalaTestVersion % Test,
+      "dev.zio" %% "zio-test" % zioVersion % Test,
+      "dev.zio" %% "zio-test-sbt" % zioVersion % Test,
     ),
+    testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework")),
     // Do not execute test in parallel
     parallelExecution in Test := false,
     // Fail the test suite if statement coverage is < 70%
@@ -55,11 +57,10 @@ object BuildHelper {
     parallelExecution in Test := true,
     libraryDependencies ++=
       Seq(
-        "com.github.pureconfig" %% "pureconfig" % pureConfigVersion excludeAll (
-          ExclusionRule(organization = "org.scala-lang")
-        ),
         "com.github.scopt" %% "scopt" % scoptVersion,
-        "org.typelevel" %% "cats-core" % catsVersion,
+        "dev.zio" %% "zio-config" % zioVersion,
+        "dev.zio" %% "zio-config-typesafe" % zioVersion,
+        "dev.zio" %% "zio" % zioVersion,
         "ch.qos.logback" % "logback-classic" % logbackVersion,
         "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingVersion,
         "org.apache.spark" %% "spark-core" % sparkVersion,

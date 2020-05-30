@@ -16,20 +16,21 @@
  */
 package com.astrolabsoftware.grafink
 
-import org.scalatest.funsuite.AnyFunSuite
-import org.scalatest.matchers.should.Matchers
+import zio.test._
+import zio.test.Assertion._
 
-class CLParserSpec extends AnyFunSuite with Matchers {
+object CLParserSpec extends DefaultRunnableSpec {
 
   val clParser = new CLParser {}
 
-  test("CLParser correctly parses supplied configFile param") {
-    val cFile = getClass.getResource("/application.conf").getPath
-    val args  = Array("--config", cFile)
-
-    val parser = clParser.parseOptions
-    val result = parser.parse(args, ArgsConfig("defaultPath"))
-
-    result should equal(Some(ArgsConfig(confFile = cFile)))
-  }
+  def spec: ZSpec[Environment, Failure] =
+    suite("CLParserSpec")(
+      test("CLParser correctly parses supplied configFile param") {
+        val cFile = getClass.getResource("/application.conf").getPath
+        val args  = Array("--config", cFile)
+        val parser = clParser.parseOptions
+        val result = parser.parse(args, ArgsConfig("defaultPath"))
+        assert(result)(equalTo(Some(ArgsConfig(confFile = cFile))))
+      }
+    )
 }

@@ -19,7 +19,7 @@ package com.astrolabsoftware.grafink
 import buildinfo.BuildInfo
 import scopt.OptionParser
 
-case class ArgsConfig(confFile: String)
+final case class ArgsConfig(confFile: String)
 
 /**
  * Command line parser for grafink

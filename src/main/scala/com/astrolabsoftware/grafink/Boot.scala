@@ -16,25 +16,17 @@
  */
 package com.astrolabsoftware.grafink
 
-import java.io.File
-
-import buildinfo.BuildInfo
-import cats.implicits._
-import com.typesafe.config.ConfigFactory
-import org.apache.spark.sql.SparkSession
-import pureconfig._
-import pureconfig.generic.ProductHint
-import pureconfig.generic.auto._
+import zio._
+import zio.blocking.Blocking
+import zio.config.ConfigDescriptor._
+import zio.console.Console
 
 import com.astrolabsoftware.grafink.models.ReaderConfig
 
 /**
  * Contains the entry point to the spark job
  */
-object Boot {
-
-  // For pure config to be able to use camel case
-  implicit def hint[T]: ProductHint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
+object Boot extends App {
 
   /**
    * Parses the command line options using CLParser
@@ -50,37 +42,29 @@ object Boot {
     )
   }
 
-  /**
-   * Runs the spark job to load data into Janusgraph
-   * @param config The parsed command line options to the job
-   */
-  def runJob(config: ArgsConfig): Unit = {
-    implicit val spark = SparkSession
-      .builder()
-      .appName(BuildInfo.name)
-      .getOrCreate()
-    try {
+  val readerConfigDescription: zio.config.ConfigDescriptor[ReaderConfig] = string("basePath")(ReaderConfig.apply, ReaderConfig.unapply)
 
-      // Get conf
-      val conf = ConfigFactory.parseFile(new File(config.confFile))
+  def getConfig[T](filePath: String, configDescriptor: zio.config.ConfigDescriptor[T])(implicit tag: Tag[T]): Layer[Throwable, config.Config[T]] =
+    zio.config.Config.fromPropertiesFile(filePath, configDescriptor)
 
-      for {
-        readerConf <- ConfigSource.fromConfig(conf).at("reader").load[ReaderConfig]
+  override def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] = {
 
-      } yield {
-
-      }
-
-    } finally {
-      spark.stop()
-    }
-  }
-
-  def main(args: Array[String]): Unit = {
-    parseArgs(args) match {
+    val program = parseArgs(args.toArray) match {
       case Some(config) =>
-        runJob(config)
+        val configLayer = getConfig[ReaderConfig](config.confFile, readerConfigDescription)
+        Job.runGrafinkJob.provideLayer(
+          ZLayer.requires[Blocking] ++
+            ZLayer.requires[Console] ++
+            configLayer ++
+            SparkEnv.cluster
+        )
       case None =>
+        ZIO.fail("Invalid command line arguments")
     }
+
+    program.foldM(
+      fail => console.putStrLn(s"Failed $fail").as(ExitCode.failure),
+      _ => console.putStrLn(s"Succeeded").as(ExitCode.success)
+    )
   }
 }
