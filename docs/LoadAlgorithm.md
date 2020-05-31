@@ -114,6 +114,7 @@ This takes a hybrid approach between the aforementioned 2 options.
 
 - Creates another, albeit partial copy of the data (since we do not need to store edges)
 
+<div id="option4" />
 #### Option 4
 
 This option builds on the [Option 3](#option3) by using custom ids for adding vertices.
