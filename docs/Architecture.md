@@ -2,6 +2,8 @@
 
 This document describes the architecture for grafink
 
+![Architecture](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/saucam/grafink/feature/BaseFw/docs/architecture.puml)
+
 We follow the [algorithm described here](LoadAlgorithm.md#option4)
 
 The steps to load data are as follows:
