@@ -71,12 +71,7 @@ trait CLParser {
         )
     }
 
-  def validateDate(date: String): Boolean = Try { LocalDate.parse(date, dateFormat); true }.getOrElse(false)
-
-  def validateStartEndDate(startDate: LocalDate, endDate: Option[LocalDate]): Boolean = {
-    val newEndDate = endDate.getOrElse(startDate)
-    if (newEndDate.compareTo(startDate) >= 0) true else false
-  }
+  def validateDate(date: String): Boolean = Try { getLocalDate(date); true }.getOrElse(false)
 }
 
 object CLParser {
