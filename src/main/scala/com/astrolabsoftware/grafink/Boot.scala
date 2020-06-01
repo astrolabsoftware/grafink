@@ -16,12 +16,15 @@
  */
 package com.astrolabsoftware.grafink
 
+import java.io.File
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
+import com.typesafe.config.ConfigFactory
 import zio._
 import zio.blocking.Blocking
 import zio.config.ConfigDescriptor._
+import zio.config.typesafe.TypesafeConfig
 import zio.console.Console
 
 import com.astrolabsoftware.grafink.models.{ GrafinkException, ReaderConfig }
@@ -51,16 +54,21 @@ object Boot extends App {
   val readerConfigDescription: zio.config.ConfigDescriptor[ReaderConfig] =
     string("basePath")(ReaderConfig.apply, ReaderConfig.unapply)
 
-  def getConfig[T](filePath: String, configDescriptor: zio.config.ConfigDescriptor[T])(
+  def getConfig[T](
+    conf: com.typesafe.config.Config,
+    nameSpace: String,
+    configDescriptor: zio.config.ConfigDescriptor[T]
+  )(
     implicit tag: Tag[T]
   ): Layer[Throwable, config.Config[T]] =
-    zio.config.Config.fromPropertiesFile(filePath, configDescriptor)
+    TypesafeConfig.fromTypesafeConfig(conf.getConfig(nameSpace), configDescriptor)
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] = {
 
     val program = parseArgs(args.toArray) match {
       case Some(config) =>
-        val configLayer = getConfig[ReaderConfig](config.confFile, readerConfigDescription)
+        val configLayer =
+          getConfig[ReaderConfig](ConfigFactory.parseFile(new File(config.confFile)), "reader", readerConfigDescription)
         Job.runGrafinkJob.provideLayer(
           ZLayer.requires[Blocking] ++
             ZLayer.requires[Console] ++
