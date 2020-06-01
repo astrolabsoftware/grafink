@@ -23,3 +23,9 @@ The steps to load data are as follows:
 10. Read entire vertices data from the intermediate data dump that we maintain.
 11. Use configuration rules to add edges. Based on the data and the rules, we add edges from new alerts to
     all the existing vertices. This is done by again using spark executors.
+
+The ```IDManager``` table schema will be as follows:
+
+- Key will be a combination of JanusGraph table name and input ```startdate```.
+- There will be a column family with columns ```startOffset```, ```endOffset``` that stores id ranges being used to load data
+  for that day into JanusGraph.
