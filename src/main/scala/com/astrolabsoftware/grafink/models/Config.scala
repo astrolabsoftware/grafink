@@ -16,4 +16,38 @@
  */
 package com.astrolabsoftware.grafink.models
 
+import pureconfig.{ CamelCase, ConfigFieldMapping, ConfigSource }
+import pureconfig.generic.ProductHint
+import pureconfig.generic.auto._
+import zio.{ Has, Task, URIO, ZIO, ZLayer }
+import zio.logging.{ log, Logging }
+
 case class ReaderConfig(basePath: String)
+
+case class HBaseZookeeperConfig(quoram: String)
+
+case class HBaseConfig(zookeeper: HBaseZookeeperConfig)
+
+final case class GrafinkConfiguration(reader: ReaderConfig, hbase: HBaseConfig)
+
+package object config {
+
+  // For pure config to be able to use camel case
+  implicit def hint[T]: ProductHint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
+
+  type GrafinkConfig = Has[ReaderConfig] with Has[HBaseConfig]
+
+  object Config {
+
+    val live: (String) => ZLayer[Logging, Throwable, GrafinkConfig] = confFile =>
+      ZLayer.fromEffectMany(
+        Task
+          .effect(ConfigSource.file(confFile).loadOrThrow[GrafinkConfiguration])
+          .map(c => Has(c.reader) ++ Has(c.hbase))
+          .tapError(throwable => log.error(s"Loading configuration failed with error: $throwable"))
+      )
+
+    val readerConfig: URIO[Has[ReaderConfig], ReaderConfig] = ZIO.service
+    val hbaseConfig: URIO[Has[HBaseConfig], HBaseConfig]    = ZIO.service
+  }
+}

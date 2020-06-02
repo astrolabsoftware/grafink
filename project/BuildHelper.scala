@@ -21,8 +21,11 @@ import scoverage.ScoverageKeys._
 object BuildHelper {
 
   val zioVersion = "1.0.0-RC20"
+  val pureConfigVersion = "0.12.3"
+  val zioLoggingVersion = "0.3.0"
   val sparkVersion = "2.4.4"
   val scoptVersion = "3.7.1"
+  val hbaseVersion = "2.0.5"
 
   val scalaTestVersion = "3.1.0"
   val logbackVersion = "1.2.3"
@@ -58,11 +61,17 @@ object BuildHelper {
     libraryDependencies ++=
       Seq(
         "com.github.scopt" %% "scopt" % scoptVersion,
-        "dev.zio" %% "zio-config" % zioVersion,
-        "dev.zio" %% "zio-config-typesafe" % zioVersion,
+        "com.github.pureconfig" %% "pureconfig" % pureConfigVersion,
         "dev.zio" %% "zio" % zioVersion,
-        "ch.qos.logback" % "logback-classic" % logbackVersion,
-        "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingVersion,
+        "dev.zio" %% "zio-logging-slf4j" % zioLoggingVersion,
+        "org.apache.hbase" % "hbase-client" % hbaseVersion excludeAll(
+          ExclusionRule(organization = "junit"),
+          ExclusionRule(organization = "org.slf4j")
+        ),
+        "org.apache.hbase" % "hbase-common" % hbaseVersion excludeAll(
+          ExclusionRule(organization = "junit"),
+          ExclusionRule(organization = "org.slf4j")
+        ),
         "org.apache.spark" %% "spark-core" % sparkVersion,
         "org.apache.spark" %% "spark-sql" % sparkVersion
       )

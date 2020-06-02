@@ -18,30 +18,28 @@ package com.astrolabsoftware.grafink
 
 import zio._
 import zio.blocking.Blocking
-import zio.config.Config
-import zio.config.config
 import zio.console.Console
 
-import com.astrolabsoftware.grafink.models.ReaderConfig
+import com.astrolabsoftware.grafink.models.config._
 
 // The core application
 object Job {
 
   type SparkEnv = Has[SparkEnv.Service]
 
-  val logProgramConfig: ZIO[Console with Config[ReaderConfig], Nothing, Unit] =
+  val logProgramConfig: ZIO[Console with GrafinkConfig, Nothing, Unit] =
     for {
-      r <- config[ReaderConfig]
+      r <- Config.readerConfig
       _ <- zio.console.putStrLn(s"Executing with parameters ${r.basePath}")
     } yield ()
 
   /**
    * Runs the spark job to load data into JanusGraph
    */
-  val runGrafinkJob: ZIO[SparkEnv with Config[ReaderConfig] with Console with Blocking, Throwable, Unit] =
+  val runGrafinkJob: ZIO[SparkEnv with GrafinkConfig with Console with Blocking, Throwable, Unit] =
     for {
       _     <- logProgramConfig
-      conf  <- config[ReaderConfig]
+      conf  <- Config.readerConfig
       spark <- ZIO.access[SparkEnv](_.get.sparkEnv)
       // TODO: Insert the processing here
       result <- ZIO

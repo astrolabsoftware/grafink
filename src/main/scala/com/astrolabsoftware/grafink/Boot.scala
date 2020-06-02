@@ -23,12 +23,13 @@ import java.time.temporal.ChronoUnit
 import com.typesafe.config.ConfigFactory
 import zio._
 import zio.blocking.Blocking
-import zio.config.ConfigDescriptor._
-import zio.config.typesafe.TypesafeConfig
 import zio.console.Console
 
-import com.astrolabsoftware.grafink.models.{ GrafinkException, ReaderConfig }
+import com.astrolabsoftware.grafink.logging.Logger
+import com.astrolabsoftware.grafink.models.{ GrafinkException, HBaseConfig, ReaderConfig }
 import com.astrolabsoftware.grafink.models.GrafinkException.BadArgumentsException
+import com.astrolabsoftware.grafink.models.config.Config
+import com.astrolabsoftware.grafink.models.config.Config._
 
 /**
  * Contains the entry point to the spark job
@@ -51,24 +52,13 @@ object Boot extends App {
 
   val yesterdayDate = LocalDate.now.minus(1, ChronoUnit.DAYS)
 
-  val readerConfigDescription: zio.config.ConfigDescriptor[ReaderConfig] =
-    string("basePath")(ReaderConfig.apply, ReaderConfig.unapply)
-
-  def getConfig[T](
-    conf: com.typesafe.config.Config,
-    nameSpace: String,
-    configDescriptor: zio.config.ConfigDescriptor[T]
-  )(
-    implicit tag: Tag[T]
-  ): Layer[Throwable, config.Config[T]] =
-    TypesafeConfig.fromTypesafeConfig(conf.getConfig(nameSpace), configDescriptor)
-
   override def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] = {
 
     val program = parseArgs(args.toArray) match {
-      case Some(config) =>
-        val configLayer =
-          getConfig[ReaderConfig](ConfigFactory.parseFile(new File(config.confFile)), "reader", readerConfigDescription)
+      case Some(argsConfig) =>
+        val logger      = Logger.live
+        val configLayer = logger >>> Config.live(argsConfig.confFile)
+
         Job.runGrafinkJob.provideLayer(
           ZLayer.requires[Blocking] ++
             ZLayer.requires[Console] ++
