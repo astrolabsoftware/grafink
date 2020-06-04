@@ -20,10 +20,12 @@ import scoverage.ScoverageKeys._
 
 object BuildHelper {
 
+  val zioVersion = "1.0.0-RC20"
   val pureConfigVersion = "0.12.3"
-  val catsVersion = "2.0.0"
+  val zioLoggingVersion = "0.3.0"
   val sparkVersion = "2.4.4"
   val scoptVersion = "3.7.1"
+  val hbaseVersion = "2.0.5"
 
   val scalaTestVersion = "3.1.0"
   val logbackVersion = "1.2.3"
@@ -32,13 +34,16 @@ object BuildHelper {
   lazy val testSettings = Seq(
     libraryDependencies ++= Seq(
       "org.scalatest"   %% "scalatest" % scalaTestVersion % Test,
+      "dev.zio" %% "zio-test" % zioVersion % Test,
+      "dev.zio" %% "zio-test-sbt" % zioVersion % Test,
     ),
+    testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework")),
     // Do not execute test in parallel
     parallelExecution in Test := false,
     // Fail the test suite if statement coverage is < 70%
     coverageFailOnMinimum := true,
     // TODO: Increase this to 70+
-    coverageMinimum := 45,
+    coverageMinimum := 44,
     // Put nice colors on the coverage report
     coverageHighlighting := true,
     // Do not publish artifact in test
@@ -55,13 +60,18 @@ object BuildHelper {
     parallelExecution in Test := true,
     libraryDependencies ++=
       Seq(
-        "com.github.pureconfig" %% "pureconfig" % pureConfigVersion excludeAll (
-          ExclusionRule(organization = "org.scala-lang")
-        ),
         "com.github.scopt" %% "scopt" % scoptVersion,
-        "org.typelevel" %% "cats-core" % catsVersion,
-        "ch.qos.logback" % "logback-classic" % logbackVersion,
-        "com.typesafe.scala-logging" %% "scala-logging" % scalaLoggingVersion,
+        "com.github.pureconfig" %% "pureconfig" % pureConfigVersion,
+        "dev.zio" %% "zio" % zioVersion,
+        "dev.zio" %% "zio-logging-slf4j" % zioLoggingVersion,
+        "org.apache.hbase" % "hbase-client" % hbaseVersion excludeAll(
+          ExclusionRule(organization = "junit"),
+          ExclusionRule(organization = "org.slf4j")
+        ),
+        "org.apache.hbase" % "hbase-common" % hbaseVersion excludeAll(
+          ExclusionRule(organization = "junit"),
+          ExclusionRule(organization = "org.slf4j")
+        ),
         "org.apache.spark" %% "spark-core" % sparkVersion,
         "org.apache.spark" %% "spark-sql" % sparkVersion
       )

@@ -17,24 +17,28 @@
 package com.astrolabsoftware.grafink
 
 import java.io.File
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
-import buildinfo.BuildInfo
-import cats.implicits._
-import com.typesafe.config.ConfigFactory
-import org.apache.spark.sql.SparkSession
-import pureconfig._
-import pureconfig.generic.ProductHint
-import pureconfig.generic.auto._
+import zio._
+import zio.blocking.Blocking
+import zio.console.Console
 
-import com.astrolabsoftware.grafink.models.ReaderConfig
+import com.astrolabsoftware.grafink.Job.JobTime
+import com.astrolabsoftware.grafink.logging.Logger
+import com.astrolabsoftware.grafink.models.GrafinkException
+import com.astrolabsoftware.grafink.models.GrafinkException.BadArgumentsException
+import com.astrolabsoftware.grafink.models.config.Config
 
 /**
  * Contains the entry point to the spark job
  */
-object Boot {
+object Boot extends App {
 
-  // For pure config to be able to use camel case
-  implicit def hint[T]: ProductHint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
+  /**
+   * Default startdate value
+   */
+  val yesterdayDate = LocalDate.now.minus(1, ChronoUnit.DAYS)
 
   /**
    * Parses the command line options using CLParser
@@ -43,44 +47,38 @@ object Boot {
    */
   def parseArgs(args: Array[String]): Option[ArgsConfig] = {
     val clParser = new CLParser {}
-    val parser = clParser.parseOptions
+    val parser   = clParser.parseOptions
     parser.parse(
       args,
-      ArgsConfig(confFile = "application.conf")
+      ArgsConfig(confFile = "application.conf", startDate = yesterdayDate, duration = 1)
     )
   }
 
-  /**
-   * Runs the spark job to load data into Janusgraph
-   * @param config The parsed command line options to the job
-   */
-  def runJob(config: ArgsConfig): Unit = {
-    implicit val spark = SparkSession
-      .builder()
-      .appName(BuildInfo.name)
-      .getOrCreate()
-    try {
+  override def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] = {
 
-      // Get conf
-      val conf = ConfigFactory.parseFile(new File(config.confFile))
+    val program = parseArgs(args.toArray) match {
+      case Some(argsConfig) =>
+        val logger      = Logger.live
+        val configLayer = logger >>> Config.live(argsConfig.confFile)
 
-      for {
-        readerConf <- ConfigSource.fromConfig(conf).at("reader").load[ReaderConfig]
-
-      } yield {
-
-      }
-
-    } finally {
-      spark.stop()
-    }
-  }
-
-  def main(args: Array[String]): Unit = {
-    parseArgs(args) match {
-      case Some(config) =>
-        runJob(config)
+        Job
+          .runGrafinkJob(JobTime(argsConfig.startDate, argsConfig.duration))
+          .provideLayer(
+            ZLayer.requires[Blocking] ++
+              ZLayer.requires[Console] ++
+              configLayer ++
+              SparkEnv.cluster
+          )
       case None =>
+        ZIO.fail(BadArgumentsException("Invalid command line arguments"))
     }
+
+    program.foldM(
+      {
+        case f: GrafinkException => console.putStrLn(s"Failed ${f.error}").as(GrafinkException.getExitCode(f))
+        case fail                => console.putStrLn(s"Failed $fail").as(ExitCode.failure)
+      },
+      _ => console.putStrLn(s"Succeeded").as(ExitCode.success)
+    )
   }
 }

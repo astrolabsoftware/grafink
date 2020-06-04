@@ -18,7 +18,7 @@ before_script:
 
 script:
   - echo "Scala version:" $TRAVIS_SCALA_VERSION
-  - sbt ++$TRAVIS_SCALA_VERSION coverage test coverageReport
+  - sbt ++$TRAVIS_SCALA_VERSION scalastyle coverage test coverageReport
   # Trick to avoid unnecessary cache updates
   - find $HOME/.sbt -name "*.lock" | xargs rm
 

@@ -15,12 +15,13 @@
 # limitations under the License.
 set -e
 
-if [ $# -le 1 ]; then
-  echo "Usage: --config <config-file>"
+if [ $# -le 3 ]; then
+  echo "Usage: --config <config-file> --startdate <date> --duration <number of days>"
   exit 1
 fi
 
-VARS=$@
+VARS=""
+SPARKVARS=""
 
 # Parse config and rules file paths
 while test $# -gt 0
@@ -28,7 +29,32 @@ do
   case "$1" in
     --config)
       shift
-      CONF_FILE_PATH=$1;;
+      CONF_FILE_PATH=$1
+      VARS="$VARS--config $1 ";;
+    --startdate)
+      shift
+      VARS="$VARS--startdate $1 ";;
+    --duration)
+      shift
+      VARS="$VARS--duration $1 ";;
+    --driver-memory)
+      shift
+      SPARKVARS="$SPARKVARS--driver-memory $1 ";;
+    --driver-cores)
+      shift
+      SPARKVARS="$SPARKVARS--driver-cores $1 ";;
+    --num-executors)
+      shift
+      SPARKVARS="$SPARKVARS--num-executors $1 ";;
+    --executor-memory)
+      shift
+      SPARKVARS="$SPARKVARS--executor-memory $1 ";;
+    --executor-cores)
+      shift
+      SPARKVARS="$SPARKVARS--executor-cores $1 ";;
+    --conf)
+      shift
+      SPARKVARS="$SPARKVARS--conf $1 ";;
   esac
   shift
 done
@@ -59,12 +85,8 @@ VARS=${VARS/$CONF_FILE_PATH/$CONF_FILE}
 spark-submit \
 --master ${SPARK_MASTER} \
 --deploy-mode ${DEPLOY_MODE} \
---driver-memory 8g \
---driver-cores 4 \
---num-executors 5 \
---executor-memory 2g \
---executor-cores 4 \
 --files $CONF_FILE_PATH \
+$SPARKVARS \
 --conf spark.rdd.compress=true \
 --conf spark.executor.memoryOverhead=1g \
 --conf spark.serializer=org.apache.spark.serializer.KryoSerializer \
