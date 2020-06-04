@@ -123,7 +123,9 @@ d:rfscore: 0.0
 
 The above row will be translated into graph data model as follows:
 
+<div id="link-properties" />
 ### Vertices
+
 - Every alert (single row in hbase) will be modelled as a graph vertex.
 - Following alert properties will be modelled as vertex properties hereby referred to as ```link properties```
     - Supernova Random Forest classification ```(d:rfscore)```

@@ -1,0 +1,47 @@
+@startuml
+title Grafink Architecture
+frame "Spark Cluster" as scluster {
+  component [driver] as driver
+  rectangle executor1 as exec1 {
+     [janusgraph instance1] as in1
+  }
+  rectangle executor2 as exec2 {
+    [janusgraph instance2] as in2
+  }
+  rectangle executor3 as exec3 {
+     [janusgraph instance3] as in3
+  }
+}
+
+cloud "JanusGraph Server" as jg {
+}
+
+rectangle "Hbase" as hbase {
+  rectangle JanusGraphTable {
+  }
+  rectangle IDManagerTable {
+  }
+}
+
+cloud parquet_data {
+
+}
+
+note left of jg: "JanusGraph server is re-started? after data loading is complete"
+
+parquet_data -[hidden]--> hbase
+jg -[hidden]--> hbase
+
+parquet_data .> exec1: read
+parquet_data .> exec2: read
+parquet_data .> exec3: read
+
+in1 -> JanusGraphTable: write
+in2 -> JanusGraphTable: write
+in3 -> JanusGraphTable: write
+
+jg -> hbase: read
+
+IDManagerTable <-> driver: read/write
+
+@enduml
