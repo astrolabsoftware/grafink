@@ -20,21 +20,25 @@ import java.io.File
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
-import com.typesafe.config.ConfigFactory
 import zio._
 import zio.blocking.Blocking
 import zio.console.Console
 
+import com.astrolabsoftware.grafink.Job.JobTime
 import com.astrolabsoftware.grafink.logging.Logger
-import com.astrolabsoftware.grafink.models.{ GrafinkException, HBaseConfig, ReaderConfig }
+import com.astrolabsoftware.grafink.models.GrafinkException
 import com.astrolabsoftware.grafink.models.GrafinkException.BadArgumentsException
 import com.astrolabsoftware.grafink.models.config.Config
-import com.astrolabsoftware.grafink.models.config.Config._
 
 /**
  * Contains the entry point to the spark job
  */
 object Boot extends App {
+
+  /**
+   * Default startdate value
+   */
+  val yesterdayDate = LocalDate.now.minus(1, ChronoUnit.DAYS)
 
   /**
    * Parses the command line options using CLParser
@@ -50,8 +54,6 @@ object Boot extends App {
     )
   }
 
-  val yesterdayDate = LocalDate.now.minus(1, ChronoUnit.DAYS)
-
   override def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] = {
 
     val program = parseArgs(args.toArray) match {
@@ -59,12 +61,14 @@ object Boot extends App {
         val logger      = Logger.live
         val configLayer = logger >>> Config.live(argsConfig.confFile)
 
-        Job.runGrafinkJob.provideLayer(
-          ZLayer.requires[Blocking] ++
-            ZLayer.requires[Console] ++
-            configLayer ++
-            SparkEnv.cluster
-        )
+        Job
+          .runGrafinkJob(JobTime(argsConfig.startDate, argsConfig.duration))
+          .provideLayer(
+            ZLayer.requires[Blocking] ++
+              ZLayer.requires[Console] ++
+              configLayer ++
+              SparkEnv.cluster
+          )
       case None =>
         ZIO.fail(BadArgumentsException("Invalid command line arguments"))
     }

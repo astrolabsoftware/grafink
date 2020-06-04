@@ -28,14 +28,16 @@ case class HBaseZookeeperConfig(quoram: String)
 
 case class HBaseConfig(zookeeper: HBaseZookeeperConfig)
 
-final case class GrafinkConfiguration(reader: ReaderConfig, hbase: HBaseConfig)
+case class IDManagerConfig(tableName: String, cf: String, qualifier: String)
+
+final case class GrafinkConfiguration(reader: ReaderConfig, hbase: HBaseConfig, idManager: IDManagerConfig)
 
 package object config {
 
   // For pure config to be able to use camel case
   implicit def hint[T]: ProductHint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
 
-  type GrafinkConfig = Has[ReaderConfig] with Has[HBaseConfig]
+  type GrafinkConfig = Has[ReaderConfig] with Has[HBaseConfig] with Has[IDManagerConfig]
 
   object Config {
 
@@ -43,11 +45,12 @@ package object config {
       ZLayer.fromEffectMany(
         Task
           .effect(ConfigSource.file(confFile).loadOrThrow[GrafinkConfiguration])
-          .map(c => Has(c.reader) ++ Has(c.hbase))
           .tapError(throwable => log.error(s"Loading configuration failed with error: $throwable"))
+          .map(c => Has(c.reader) ++ Has(c.hbase) ++ Has(c.idManager))
       )
 
-    val readerConfig: URIO[Has[ReaderConfig], ReaderConfig] = ZIO.service
-    val hbaseConfig: URIO[Has[HBaseConfig], HBaseConfig]    = ZIO.service
+    val readerConfig: URIO[Has[ReaderConfig], ReaderConfig]          = ZIO.service
+    val hbaseConfig: URIO[Has[HBaseConfig], HBaseConfig]             = ZIO.service
+    val idManagerConfig: URIO[Has[IDManagerConfig], IDManagerConfig] = ZIO.service
   }
 }

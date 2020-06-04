@@ -63,8 +63,8 @@ trait CLParser {
         .optional()
         .action((x, c) => c.copy(duration = x))
         .validate(x =>
-          if (x > 0 && x <= 30) success
-          else failure("Option --duration must be a valid value between 1 and 30")
+          if (x > 0 && x <= 7) success
+          else failure("Option --duration must be a valid value between 1 and 7 (included)")
         )
         .text(
           "duration accepts duration (# of days) for which the job needs to process the data starting from startdate"

@@ -16,6 +16,8 @@
  */
 package com.astrolabsoftware.grafink
 
+import java.time.LocalDate
+
 import zio._
 import zio.blocking.Blocking
 import zio.console.Console
@@ -25,34 +27,29 @@ import com.astrolabsoftware.grafink.models.config._
 // The core application
 object Job {
 
-  type SparkEnv = Has[SparkEnv.Service]
+  case class JobTime(day: LocalDate, duration: Int)
 
-  val logProgramConfig: ZIO[Console with GrafinkConfig, Nothing, Unit] =
-    for {
-      r <- Config.readerConfig
-      _ <- zio.console.putStrLn(s"Executing with parameters ${r.basePath}")
-    } yield ()
+  type SparkEnv = Has[SparkEnv.Service]
 
   /**
    * Runs the spark job to load data into JanusGraph
    */
-  val runGrafinkJob: ZIO[SparkEnv with GrafinkConfig with Console with Blocking, Throwable, Unit] =
-    for {
-      _     <- logProgramConfig
-      conf  <- Config.readerConfig
-      spark <- ZIO.access[SparkEnv](_.get.sparkEnv)
-      // TODO: Insert the processing here
-      result <- ZIO
-        .succeed("Success")
-        .ensuring(
-          ZIO
-            .effect(spark.stop())
-            .fold(
-              failure => zio.console.putStrLn(s"Error stopping SparkSession: $failure"),
-              _ => zio.console.putStrLn(s"SparkSession stopped")
-            )
-        )
-      // result  <- zio.blocking.effectBlocking()
-      _ <- zio.console.putStrLn(s"Executed something with spark ${spark.version}: $result")
-    } yield ()
+  val runGrafinkJob: JobTime => ZIO[SparkEnv with GrafinkConfig with Console with Blocking, Throwable, Unit] =
+    jobTime =>
+      for {
+        spark <- ZIO.access[SparkEnv](_.get.sparkEnv)
+        // TODO: Insert the processing here
+        result <- ZIO
+          .succeed("Success")
+          .ensuring(
+            ZIO
+              .effect(spark.stop())
+              .fold(
+                failure => zio.console.putStrLn(s"Error stopping SparkSession: $failure"),
+                _ => zio.console.putStrLn(s"SparkSession stopped")
+              )
+          )
+        // result  <- zio.blocking.effectBlocking()
+        _ <- zio.console.putStrLn(s"Executed something with spark ${spark.version}: $result")
+      } yield ()
 }

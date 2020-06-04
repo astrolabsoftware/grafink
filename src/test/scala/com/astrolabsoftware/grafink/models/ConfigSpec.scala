@@ -25,6 +25,14 @@ object ConfigSpec extends DefaultRunnableSpec {
 
         val cfg = Config.hbaseConfig
         assertM(cfg.provideLayer(layer))(equalTo(HBaseConfig(HBaseZookeeperConfig(quoram = "localhost"))))
+      },
+      testM("Invalid config file throws") {
+        val path  = getClass.getResource("/invalidapplication.conf").getPath
+        val layer = Logger.test >>> Config.live(path)
+        val cfg   = Config.readerConfig
+        assertM(cfg.provideLayer(layer).run)(
+          fails(isSubtype[pureconfig.error.ConfigReaderException[GrafinkConfig]](anything))
+        )
       }
     )
 }
