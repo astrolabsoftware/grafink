@@ -16,28 +16,41 @@
  */
 package com.astrolabsoftware.grafink.models
 
-import pureconfig.{ CamelCase, ConfigFieldMapping, ConfigSource }
+import pureconfig.{ CamelCase, ConfigFieldMapping, ConfigReader, ConfigSource }
 import pureconfig.generic.ProductHint
 import pureconfig.generic.auto._
+import pureconfig.generic.semiauto._
 import zio.{ Has, Task, URIO, ZIO, ZLayer }
 import zio.logging.{ log, Logging }
 
-case class ReaderConfig(basePath: String)
+case class ReaderConfig(basePath: String, format: Format)
 
 case class HBaseZookeeperConfig(quoram: String)
 
 case class HBaseConfig(zookeeper: HBaseZookeeperConfig)
 
-case class IDManagerConfig(tableName: String, cf: String, qualifier: String)
+case class JanusGraphConfig(tableName: String)
 
-final case class GrafinkConfiguration(reader: ReaderConfig, hbase: HBaseConfig, idManager: IDManagerConfig)
+case class SparkPathConfig(dataPath: String)
+
+case class HBaseColumnConfig(tableName: String, cf: String, qualifier: String)
+
+case class IDManagerConfig(spark: SparkPathConfig, hbase: HBaseColumnConfig)
+
+final case class GrafinkConfiguration(
+  reader: ReaderConfig,
+  hbase: HBaseConfig,
+  janusgraph: JanusGraphConfig,
+  idManager: IDManagerConfig
+)
 
 package object config {
 
   // For pure config to be able to use camel case
-  implicit def hint[T]: ProductHint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
+  implicit def hint[T]: ProductHint[T]          = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
+  implicit val formatHint: ConfigReader[Format] = deriveEnumerationReader[Format]
 
-  type GrafinkConfig = Has[ReaderConfig] with Has[HBaseConfig] with Has[IDManagerConfig]
+  type GrafinkConfig = Has[ReaderConfig] with Has[HBaseConfig] with Has[JanusGraphConfig] with Has[IDManagerConfig]
 
   object Config {
 
@@ -46,11 +59,12 @@ package object config {
         Task
           .effect(ConfigSource.file(confFile).loadOrThrow[GrafinkConfiguration])
           .tapError(throwable => log.error(s"Loading configuration failed with error: $throwable"))
-          .map(c => Has(c.reader) ++ Has(c.hbase) ++ Has(c.idManager))
+          .map(c => Has(c.reader) ++ Has(c.hbase) ++ Has(c.janusgraph) ++ Has(c.idManager))
       )
 
-    val readerConfig: URIO[Has[ReaderConfig], ReaderConfig]          = ZIO.service
-    val hbaseConfig: URIO[Has[HBaseConfig], HBaseConfig]             = ZIO.service
-    val idManagerConfig: URIO[Has[IDManagerConfig], IDManagerConfig] = ZIO.service
+    val readerConfig: URIO[Has[ReaderConfig], ReaderConfig]             = ZIO.service
+    val hbaseConfig: URIO[Has[HBaseConfig], HBaseConfig]                = ZIO.service
+    val janusGraphConfig: URIO[Has[JanusGraphConfig], JanusGraphConfig] = ZIO.service
+    val idManagerConfig: URIO[Has[IDManagerConfig], IDManagerConfig]    = ZIO.service
   }
 }

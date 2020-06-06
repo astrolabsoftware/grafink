@@ -4,6 +4,7 @@ import zio.test._
 import zio.test.Assertion._
 
 import com.astrolabsoftware.grafink.logging.Logger
+import com.astrolabsoftware.grafink.models.Format.Parquet
 import com.astrolabsoftware.grafink.models.config.{ Config, GrafinkConfig }
 
 object ConfigSpec extends DefaultRunnableSpec {
@@ -15,7 +16,7 @@ object ConfigSpec extends DefaultRunnableSpec {
         val layer = Logger.test >>> Config.live(path)
 
         val cfg = Config.readerConfig
-        assertM(cfg.provideLayer(layer))(equalTo(ReaderConfig(basePath = "/test/base/path")))
+        assertM(cfg.provideLayer(layer))(equalTo(ReaderConfig(basePath = "/test/base/path", format = Parquet)))
       },
       testM("HBaseConfig is parsed correctly") {
 
