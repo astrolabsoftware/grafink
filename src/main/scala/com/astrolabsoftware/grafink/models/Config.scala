@@ -16,12 +16,12 @@
  */
 package com.astrolabsoftware.grafink.models
 
-import pureconfig.{ CamelCase, ConfigFieldMapping, ConfigReader, ConfigSource }
+import pureconfig._
 import pureconfig.generic.ProductHint
 import pureconfig.generic.auto._
 import pureconfig.generic.semiauto._
-import zio.{ Has, Task, URIO, ZIO, ZLayer }
-import zio.logging.{ log, Logging }
+import zio.{Has, Task, URIO, ZIO, ZLayer}
+import zio.logging.{log, Logging}
 
 case class ReaderConfig(basePath: String, format: Format)
 
