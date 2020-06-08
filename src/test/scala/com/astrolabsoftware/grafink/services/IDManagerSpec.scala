@@ -13,7 +13,14 @@ import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.hbase.HBaseClientService.HBaseClientService
 import com.astrolabsoftware.grafink.hbase.HBaseClientServiceMock
 import com.astrolabsoftware.grafink.logging.Logger
-import com.astrolabsoftware.grafink.models.{ HBaseColumnConfig, IDManagerConfig, JanusGraphConfig, SparkPathConfig }
+import com.astrolabsoftware.grafink.models.{
+  HBaseColumnConfig,
+  IDManagerConfig,
+  JanusGraphConfig,
+  JanusGraphStorageConfig,
+  SparkPathConfig,
+  VertexLoaderConfig
+}
 
 object IDManagerSpec extends DefaultRunnableSpec {
 
@@ -26,7 +33,8 @@ object IDManagerSpec extends DefaultRunnableSpec {
       val jobTime             = JobTime(LocalDate.parse(date, dateFormat), 1)
       val app                 = IDManager.fetchID(jobTime)
       val idConfigLayer       = ZLayer.succeed(IDManagerConfig(SparkPathConfig(""), HBaseColumnConfig("", "", "")))
-      val janusConfigLayer    = ZLayer.succeed(JanusGraphConfig(janusGraphTableName))
+      val janusConfigLayer =
+        ZLayer.succeed(JanusGraphConfig(VertexLoaderConfig(10), JanusGraphStorageConfig("", 0, janusGraphTableName)))
       val mockEnv: ULayer[HBaseClientService] = (
         HBaseClientServiceMock.GetFromTable(
           equalTo(rowKey),

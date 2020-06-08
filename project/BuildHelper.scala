@@ -26,6 +26,7 @@ object BuildHelper {
   val sparkVersion = "2.4.4"
   val scoptVersion = "3.7.1"
   val hbaseVersion = "2.0.5"
+  val janusGraphVersion = "0.5.1"
 
   val scalaTestVersion = "3.1.0"
   val logbackVersion = "1.2.3"
@@ -73,7 +74,9 @@ object BuildHelper {
           ExclusionRule(organization = "org.slf4j")
         ),
         "org.apache.spark" %% "spark-core" % sparkVersion,
-        "org.apache.spark" %% "spark-sql" % sparkVersion
+        "org.apache.spark" %% "spark-sql" % sparkVersion,
+        "org.janusgraph" % "janusgraph-core" % janusGraphVersion,
+        "org.janusgraph" % "janusgraph-hbase" % janusGraphVersion
       )
   ) ++ basicSettings
 }

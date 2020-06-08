@@ -20,8 +20,8 @@ import pureconfig._
 import pureconfig.generic.ProductHint
 import pureconfig.generic.auto._
 import pureconfig.generic.semiauto._
-import zio.{Has, Task, URIO, ZIO, ZLayer}
-import zio.logging.{log, Logging}
+import zio.{ Has, Task, URIO, ZIO, ZLayer }
+import zio.logging.{ log, Logging }
 
 case class ReaderConfig(basePath: String, format: Format)
 
@@ -29,7 +29,11 @@ case class HBaseZookeeperConfig(quoram: String)
 
 case class HBaseConfig(zookeeper: HBaseZookeeperConfig)
 
-case class JanusGraphConfig(tableName: String)
+case class VertexLoaderConfig(batchSize: Int)
+
+case class JanusGraphStorageConfig(host: String, port: Int, tableName: String)
+
+case class JanusGraphConfig(vertexLoader: VertexLoaderConfig, storage: JanusGraphStorageConfig)
 
 case class SparkPathConfig(dataPath: String)
 

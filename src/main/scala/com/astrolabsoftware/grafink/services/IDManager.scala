@@ -68,7 +68,7 @@ final class IDManagerHBaseService(
   override val config: IDManagerConfig = idConfig
 
   override def fetchID(jobTime: JobTime): RIO[Logging, Option[IDType]] = {
-    val key = makeIdKey(s"${jobTime.day.format(PartitionManager.dateFormat)}", janusConfig.tableName)
+    val key = makeIdKey(s"${jobTime.day.format(PartitionManager.dateFormat)}", janusConfig.storage.tableName)
     for {
       res <- client.getFromTable(key, config.hbase.cf, config.hbase.qualifier, config.hbase.tableName)
       id = res.map(_.toLong)
