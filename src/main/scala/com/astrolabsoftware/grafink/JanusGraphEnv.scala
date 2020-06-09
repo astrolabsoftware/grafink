@@ -16,9 +16,9 @@
  */
 package com.astrolabsoftware.grafink
 
-import org.janusgraph.core.{JanusGraph, JanusGraphFactory}
+import org.janusgraph.core.{ JanusGraph, JanusGraphFactory }
 import org.janusgraph.diskstorage.util.time.TimestampProviders
-import zio.{Has, ZLayer}
+import zio.{ Has, ZLayer }
 import zio.blocking.Blocking
 
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
@@ -31,7 +31,9 @@ object JanusGraphEnv {
     def graph: JanusGraph
   }
 
-  def make(graph: JanusGraphConfig => JanusGraph): ZLayer[Blocking with Has[JanusGraphConfig], Throwable, Has[Service]] =
+  def make(
+    graph: JanusGraphConfig => JanusGraph
+  ): ZLayer[Blocking with Has[JanusGraphConfig], Throwable, Has[Service]] =
     ZLayer.fromFunctionManyM { blockingWithConfig =>
       blockingWithConfig.get
         .effectBlocking(graph)
@@ -45,7 +47,7 @@ object JanusGraphEnv {
   def hbase(): ZLayer[Blocking with Has[JanusGraphConfig], Throwable, Has[Service]] =
     make { config =>
       JanusGraphFactory.build
-        // Use hbase as storage backend
+      // Use hbase as storage backend
         .set("storage.backend", "hbase")
         .set("graph.timestamps", TimestampProviders.MILLI)
         // Configure hbase as storage backend
@@ -64,7 +66,7 @@ object JanusGraphEnv {
   def inmemory(): ZLayer[Blocking with Has[JanusGraphConfig], Throwable, Has[Service]] =
     make { _ =>
       JanusGraphFactory.build
-        // Use hbase as storage backend
+      // Use hbase as storage backend
         .set("storage.backend", "inmemory")
         // Manual transactions
         .set("storage.transactions", false)

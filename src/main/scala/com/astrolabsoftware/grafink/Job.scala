@@ -21,8 +21,18 @@ import java.time.LocalDate
 import zio._
 import zio.blocking.Blocking
 import zio.console.Console
+import zio.logging.Logging
 
+import com.astrolabsoftware.grafink.JanusGraphEnv.JanusGraphEnv
+import com.astrolabsoftware.grafink.common.PartitionManager
 import com.astrolabsoftware.grafink.models.config._
+import com.astrolabsoftware.grafink.processor.VertexProcessor
+import com.astrolabsoftware.grafink.processor.VertexProcessor.VertexProcessorService
+import com.astrolabsoftware.grafink.schema.SchemaLoader
+import com.astrolabsoftware.grafink.schema.SchemaLoader.SchemaLoaderService
+import com.astrolabsoftware.grafink.services.IDManager.IDManagerService
+import com.astrolabsoftware.grafink.services.reader.Reader
+import com.astrolabsoftware.grafink.services.reader.Reader.ReaderService
 
 // The core application
 object Job {
@@ -30,17 +40,37 @@ object Job {
   case class JobTime(day: LocalDate, duration: Int)
 
   type SparkEnv = Has[SparkEnv.Service]
+  type RunEnv =
+    SparkEnv
+      with JanusGraphEnv
+      with GrafinkConfig
+      with SchemaLoaderService
+      with ReaderService
+      with IDManagerService
+      with VertexProcessorService
+      with Logging
+      with ZEnv
+
+  val process: JobTime => ZIO[RunEnv, Throwable, Unit] =
+    jobTime =>
+      for {
+        // load schema
+        _ <- SchemaLoader.loadSchema()
+        partitionManager = PartitionManager(jobTime.day, jobTime.duration)
+        // read data
+        df <- Reader.read(partitionManager)
+        // Process vertices
+        _ <- VertexProcessor.process(jobTime, df)
+      } yield ()
 
   /**
    * Runs the spark job to load data into JanusGraph
    */
-  val runGrafinkJob: JobTime => ZIO[SparkEnv with GrafinkConfig with Console with Blocking, Throwable, Unit] =
+  val runGrafinkJob: JobTime => ZIO[RunEnv, Throwable, Unit] =
     jobTime =>
       for {
         spark <- ZIO.access[SparkEnv](_.get.sparkEnv)
-        // TODO: Insert the processing here
-        result <- ZIO
-          .succeed("Success")
+        result <- process(jobTime)
           .ensuring(
             ZIO
               .effect(spark.stop())
@@ -49,7 +79,6 @@ object Job {
                 _ => zio.console.putStrLn(s"SparkSession stopped")
               )
           )
-        // result  <- zio.blocking.effectBlocking()
-        _ <- zio.console.putStrLn(s"Executed something with spark ${spark.version}: $result")
+        _ <- zio.console.putStrLn(s"Executed grafink job with spark ${spark.version}: $result")
       } yield ()
 }

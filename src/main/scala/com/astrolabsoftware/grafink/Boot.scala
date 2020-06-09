@@ -29,6 +29,10 @@ import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models.GrafinkException
 import com.astrolabsoftware.grafink.models.GrafinkException.BadArgumentsException
 import com.astrolabsoftware.grafink.models.config.Config
+import com.astrolabsoftware.grafink.processor.VertexProcessor
+import com.astrolabsoftware.grafink.schema.SchemaLoader
+import com.astrolabsoftware.grafink.services.IDManager
+import com.astrolabsoftware.grafink.services.reader.Reader
 
 /**
  * Contains the entry point to the spark job
@@ -58,16 +62,26 @@ object Boot extends App {
 
     val program = parseArgs(args.toArray) match {
       case Some(argsConfig) =>
-        val logger      = Logger.live
-        val configLayer = logger >>> Config.live(argsConfig.confFile)
+        val logger               = Logger.live
+        val configLayer          = logger >>> Config.live(argsConfig.confFile)
+        val sparkLayer           = ZLayer.requires[Blocking] >>> SparkEnv.cluster
+        val janusGraphLayer      = ZLayer.requires[Blocking] ++ configLayer >>> JanusGraphEnv.hbase
+        val schemaLoaderLayer    = logger ++ janusGraphLayer ++ configLayer >>> SchemaLoader.live
+        val idManagerLayer       = logger ++ sparkLayer ++ configLayer >>> IDManager.liveUSpark
+        val readerLayer          = logger ++ sparkLayer ++ configLayer >>> Reader.live
+        val vertexProcessorLayer = logger ++ sparkLayer ++ configLayer ++ janusGraphLayer >>> VertexProcessor.live
 
         Job
           .runGrafinkJob(JobTime(argsConfig.startDate, argsConfig.duration))
-          .provideLayer(
-            ZLayer.requires[Blocking] ++
-              ZLayer.requires[Console] ++
+          .provideCustomLayer(
+            SparkEnv.cluster ++
+              janusGraphLayer ++
               configLayer ++
-              SparkEnv.cluster
+              schemaLoaderLayer ++
+              readerLayer ++
+              idManagerLayer ++
+              vertexProcessorLayer ++
+              logger
           )
       case None =>
         ZIO.fail(BadArgumentsException("Invalid command line arguments"))
