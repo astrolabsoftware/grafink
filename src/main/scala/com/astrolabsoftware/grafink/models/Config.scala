@@ -29,11 +29,13 @@ case class HBaseZookeeperConfig(quoram: String)
 
 case class HBaseConfig(zookeeper: HBaseZookeeperConfig)
 
+case class SchemaConfig(vertexPropertyCols: List[String], vertexLabel: String, edgeLabels: List[String])
+
 case class VertexLoaderConfig(batchSize: Int)
 
 case class JanusGraphStorageConfig(host: String, port: Int, tableName: String)
 
-case class JanusGraphConfig(vertexLoader: VertexLoaderConfig, storage: JanusGraphStorageConfig)
+case class JanusGraphConfig(schema: SchemaConfig, vertexLoader: VertexLoaderConfig, storage: JanusGraphStorageConfig)
 
 case class SparkPathConfig(dataPath: String)
 
