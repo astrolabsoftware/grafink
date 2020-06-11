@@ -23,7 +23,9 @@ import pureconfig.generic.semiauto._
 import zio.{ Has, Task, URIO, ZIO, ZLayer }
 import zio.logging.{ log, Logging }
 
-case class ReaderConfig(basePath: String, format: Format)
+case class RenameColumn(f: String, t: String)
+
+case class ReaderConfig(basePath: String, format: Format, keepCols: List[String], keepColsRenamed: List[RenameColumn])
 
 case class HBaseZookeeperConfig(quoram: String)
 

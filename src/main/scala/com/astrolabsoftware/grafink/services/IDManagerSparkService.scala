@@ -34,9 +34,9 @@ final class IDManagerSparkService(spark: SparkSession, _config: IDManagerConfig)
     // TODO: Modify this to read data from only the latest day's data present in the path
     import org.apache.spark.sql.functions._
     for {
-      df <- ZIO.effect(spark.read.parquet(config.spark.dataPath))
-      res = df.select(max(col("id")))
-      currentID <- ZIO.effect(res.collect.headOption.map(_.getLong(0)))
+      df  <- ZIO.effect(spark.read.parquet(config.spark.dataPath))
+      res <- ZIO.effect(df.select(max(col("id"))).collect)
+      currentID = res.headOption.map(_.getLong(0))
     } yield currentID
   }
 }

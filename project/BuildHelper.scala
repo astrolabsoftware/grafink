@@ -36,7 +36,7 @@ object BuildHelper {
     libraryDependencies ++= Seq(
       "org.scalatest"   %% "scalatest" % scalaTestVersion % Test,
       "dev.zio" %% "zio-test" % zioVersion % Test,
-      "dev.zio" %% "zio-test-sbt" % zioVersion % Test,
+      "dev.zio" %% "zio-test-sbt" % zioVersion % Test
     ),
     testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework")),
     // Do not execute test in parallel
@@ -67,16 +67,19 @@ object BuildHelper {
         "dev.zio" %% "zio-logging-slf4j" % zioLoggingVersion,
         "org.apache.hbase" % "hbase-client" % hbaseVersion excludeAll(
           ExclusionRule(organization = "junit"),
-          ExclusionRule(organization = "org.slf4j")
+          ExclusionRule(organization = "org.slf4j"),
+          ExclusionRule(organization = "com.fasterxml.jackson.core")
         ),
         "org.apache.hbase" % "hbase-common" % hbaseVersion excludeAll(
           ExclusionRule(organization = "junit"),
-          ExclusionRule(organization = "org.slf4j")
+          ExclusionRule(organization = "org.slf4j"),
+          ExclusionRule(organization = "com.fasterxml.jackson.core")
         ),
         "org.apache.spark" %% "spark-core" % sparkVersion,
         "org.apache.spark" %% "spark-sql" % sparkVersion,
         "org.janusgraph" % "janusgraph-core" % janusGraphVersion,
         "org.janusgraph" % "janusgraph-hbase" % janusGraphVersion
       )
+
   ) ++ basicSettings
 }

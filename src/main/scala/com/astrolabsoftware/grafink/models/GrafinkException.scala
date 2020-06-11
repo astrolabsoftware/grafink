@@ -21,12 +21,16 @@ sealed abstract class GrafinkException(val error: String) extends Throwable
 object GrafinkException {
   final case class BadArgumentsException(override val error: String) extends GrafinkException(error)
 
+  final case class NoDataException(override val error: String) extends GrafinkException(error)
+
   def getExitCode(e: GrafinkException): zio.ExitCode = e match {
     case _: BadArgumentsException => ExitCodes.badArguments
+    case _: NoDataException       => ExitCodes.noData
   }
 }
 
 object ExitCodes {
 
   val badArguments = zio.ExitCode(2)
+  val noData       = zio.ExitCode(9)
 }

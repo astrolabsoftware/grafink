@@ -18,12 +18,14 @@ package com.astrolabsoftware.grafink.services.reader
 
 import org.apache.hadoop.fs.FileSystem
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions._
 import zio.{ Has, RIO, URLayer, ZIO, ZLayer }
 import zio.logging.{ log, Logging }
 
-import com.astrolabsoftware.grafink.Job.{ JobTime, SparkEnv }
+import com.astrolabsoftware.grafink.Job.SparkEnv
 import com.astrolabsoftware.grafink.common.PartitionManager
-import com.astrolabsoftware.grafink.models.{ IDManagerConfig, ReaderConfig }
+import com.astrolabsoftware.grafink.models.GrafinkException.NoDataException
+import com.astrolabsoftware.grafink.models.ReaderConfig
 import com.astrolabsoftware.grafink.models.config.Config
 
 object Reader {
@@ -53,15 +55,25 @@ object Reader {
             )(fs =>
               for {
                 readPaths <- partitionManager.getValidPartitionPathStrings(readerConf.basePath, fs)
-                df = if (readPaths.isEmpty) {
-                  spark.emptyDataFrame
+                _         <- log.info(s"Reading data from paths: ${readPaths.mkString}")
+                df <- if (readPaths.isEmpty) {
+                  ZIO.fail(
+                    NoDataException(
+                      s"No data at basepath ${readerConf.basePath} for startdate = ${partitionManager.startDate} and duration = ${partitionManager.duration}"
+                    )
+                  )
                 } else {
-                  spark.read
-                    .option("basePath", config.basePath)
-                    .format(config.format.toString)
-                    .load(readPaths: _*)
+                  ZIO.effect(
+                    spark.read
+                      .option("basePath", config.basePath)
+                      .format(config.format.toString)
+                      .load(readPaths: _*)
+                  )
                 }
-              } yield df
+                colsToSelect = config.keepCols.map(col(_))
+                colsRenamed  = config.keepColsRenamed.map(c => col(c.f).as(c.t))
+                dfPruned     = df.select(colsToSelect ++ colsRenamed: _*)
+              } yield dfPruned
             )
       }
     )

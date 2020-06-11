@@ -15,7 +15,19 @@ object ConfigSpec extends DefaultRunnableSpec {
         val layer = Logger.test >>> Config.live(path)
 
         val cfg = Config.readerConfig
-        assertM(cfg.provideLayer(layer))(equalTo(ReaderConfig(basePath = "/test/base/path", format = Parquet)))
+        assertM(cfg.provideLayer(layer))(
+          equalTo(
+            ReaderConfig(
+              basePath = "/test/base/path",
+              format = Parquet,
+              keepCols = List("objectId", "schemavsn"),
+              keepColsRenamed = List(
+                RenameColumn(f = "mulens.class_1", t = "mulens_class_1"),
+                RenameColumn(f = "mulens.class_2", t = "mulens_class_2")
+              )
+            )
+          )
+        )
       },
       testM("HBaseConfig is parsed correctly") {
 
