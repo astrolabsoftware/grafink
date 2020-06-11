@@ -7,6 +7,7 @@ import zio.{ console, ZIO }
 import zio.blocking.Blocking
 import zio.test._
 import zio.test.Assertion._
+import zio.test.environment.{ TestClock, TestConsole }
 
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
@@ -49,7 +50,7 @@ object PartitionManagerSpec extends DefaultRunnableSpec {
             )
         } yield paths
 
-        assertM(app.provideLayer(Blocking.live >>> sparkLayer ++ Logger.live))(
+        assertM(app.provideLayer((Blocking.live >>> sparkLayer) ++ Logger.test))(
           hasSameElements(List(s"$path/year=2019/month=02/day=01"))
         )
       }
