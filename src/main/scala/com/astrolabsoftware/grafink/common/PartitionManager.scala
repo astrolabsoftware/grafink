@@ -47,7 +47,7 @@ case class PartitionManager(startDate: LocalDate, duration: Int) {
     paths(nextDate, duration - 1, nextDate :: p)
   }
 
-  val partitionPaths: List[PartitionPath] = paths(startDate, duration, startDate :: Nil)
+  val partitionPaths: List[PartitionPath] = paths(startDate, duration - 1, startDate :: Nil)
 
   def testDirExist(fs: FileSystem, path: String): ZIO[Logging, Throwable, Boolean] = {
     val p = new Path(path)
