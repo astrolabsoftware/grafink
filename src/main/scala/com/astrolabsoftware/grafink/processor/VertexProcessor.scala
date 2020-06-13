@@ -16,19 +16,19 @@
  */
 package com.astrolabsoftware.grafink.processor
 
-import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkExtensions, SparkSession}
+import org.apache.spark.sql.{ DataFrame, Row, SaveMode, SparkExtensions, SparkSession }
 import org.apache.tinkerpop.gremlin.structure.T
 import org.janusgraph.core.JanusGraph
 import org.janusgraph.graphdb.database.StandardJanusGraph
-import zio.{Has, URLayer, ZIO, ZLayer}
+import zio.{ Has, URLayer, ZIO, ZLayer }
 import zio.logging.Logging
 
 import com.astrolabsoftware.grafink.JanusGraphEnv.JanusGraphEnv
-import com.astrolabsoftware.grafink.Job.{JobTime, SparkEnv}
+import com.astrolabsoftware.grafink.Job.{ JobTime, SparkEnv }
 import com.astrolabsoftware.grafink.common.PartitionManager
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
 import com.astrolabsoftware.grafink.models.config.Config
-import com.astrolabsoftware.grafink.services.IDManager.{IDManagerService, IDType}
+import com.astrolabsoftware.grafink.services.IDManager.{ IDManagerService, IDType }
 
 object VertexProcessor {
 
