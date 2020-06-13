@@ -23,14 +23,18 @@ object GrafinkException {
 
   final case class NoDataException(override val error: String) extends GrafinkException(error)
 
+  final case class GetIdException(override val error: String) extends GrafinkException(error)
+
   def getExitCode(e: GrafinkException): zio.ExitCode = e match {
     case _: BadArgumentsException => ExitCodes.badArguments
     case _: NoDataException       => ExitCodes.noData
+    case _: GetIdException        => ExitCodes.unableToGetId
   }
 }
 
 object ExitCodes {
 
-  val badArguments = zio.ExitCode(2)
-  val noData       = zio.ExitCode(9)
+  val badArguments  = zio.ExitCode(2)
+  val unableToGetId = zio.ExitCode(3)
+  val noData        = zio.ExitCode(9)
 }

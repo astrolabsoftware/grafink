@@ -24,6 +24,7 @@ import com.astrolabsoftware.grafink.common.PartitionManager
 import com.astrolabsoftware.grafink.hbase.HBaseClientService
 import com.astrolabsoftware.grafink.hbase.HBaseClientService.HBaseClientService
 import com.astrolabsoftware.grafink.models.{ IDManagerConfig, JanusGraphConfig }
+import com.astrolabsoftware.grafink.models.GrafinkException.GetIdException
 import com.astrolabsoftware.grafink.models.config.Config
 import com.astrolabsoftware.grafink.services.IDManager.IDType
 
@@ -34,7 +35,7 @@ object IDManager {
 
   trait Service {
     def config: IDManagerConfig
-    def fetchID(jobTime: JobTime): RIO[Logging, Option[IDType]]
+    def fetchID(jobTime: JobTime): RIO[Logging, IDType]
   }
 
   val liveUHbase
@@ -55,7 +56,7 @@ object IDManager {
       } yield new IDManagerSparkService(spark, config)
     )
 
-  def fetchID(jobTime: JobTime): RIO[IDManagerService with Logging, Option[IDType]] =
+  def fetchID(jobTime: JobTime): RIO[IDManagerService with Logging, IDType] =
     RIO.accessM(_.get.fetchID(jobTime))
 }
 
@@ -67,11 +68,12 @@ final class IDManagerHBaseService(
 
   override val config: IDManagerConfig = idConfig
 
-  override def fetchID(jobTime: JobTime): RIO[Logging, Option[IDType]] = {
+  override def fetchID(jobTime: JobTime): RIO[Logging, IDType] = {
     val key = makeIdKey(s"${jobTime.day.format(PartitionManager.dateFormat)}", janusConfig.storage.tableName)
     for {
       res <- client.getFromTable(key, config.hbase.cf, config.hbase.qualifier, config.hbase.tableName)
-      id = res.map(_.toLong)
+      _  = if (res.isEmpty) ZIO.fail(GetIdException(s"Error getting validId from hbase table ${config.hbase.tableName}"))
+      id = res.get.toLong
     } yield id
   }
 

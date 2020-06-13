@@ -78,7 +78,8 @@ object BuildHelper {
         "org.apache.spark" %% "spark-core" % sparkVersion,
         "org.apache.spark" %% "spark-sql" % sparkVersion,
         "org.janusgraph" % "janusgraph-core" % janusGraphVersion,
-        "org.janusgraph" % "janusgraph-hbase" % janusGraphVersion
+        "org.janusgraph" % "janusgraph-hbase" % janusGraphVersion,
+        "org.janusgraph" % "janusgraph-inmemory" % janusGraphVersion
       )
 
   ) ++ basicSettings

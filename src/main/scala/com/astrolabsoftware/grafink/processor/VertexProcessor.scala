@@ -16,20 +16,19 @@
  */
 package com.astrolabsoftware.grafink.processor
 
-import org.apache.spark.sql.{ DataFrame, Row, SaveMode, SparkSession }
-import org.apache.spark.sql.expressions.{ UserDefinedFunction, Window }
-import org.apache.spark.sql.functions.{ col, row_number, spark_partition_id, udf }
+import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkExtensions, SparkSession}
 import org.apache.tinkerpop.gremlin.structure.T
-import org.janusgraph.core.{ JanusGraph, JanusGraphFactory }
+import org.janusgraph.core.JanusGraph
 import org.janusgraph.graphdb.database.StandardJanusGraph
-import zio.{ Has, URLayer, ZIO, ZLayer }
+import zio.{Has, URLayer, ZIO, ZLayer}
 import zio.logging.Logging
 
 import com.astrolabsoftware.grafink.JanusGraphEnv.JanusGraphEnv
-import com.astrolabsoftware.grafink.Job.{ JobTime, SparkEnv }
+import com.astrolabsoftware.grafink.Job.{JobTime, SparkEnv}
+import com.astrolabsoftware.grafink.common.PartitionManager
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
 import com.astrolabsoftware.grafink.models.config.Config
-import com.astrolabsoftware.grafink.services.IDManager.{ IDManagerService, IDType }
+import com.astrolabsoftware.grafink.services.IDManager.{IDManagerService, IDType}
 
 object VertexProcessor {
 
@@ -65,23 +64,8 @@ object VertexProcessor {
 final class VertexProcessorLive(spark: SparkSession, graph: JanusGraph, config: JanusGraphConfig)
     extends VertexProcessor.Service {
 
-  def addId(df: DataFrame, lastMax: Option[IDType]): ZIO[Logging, Throwable, DataFrame] =
-    for {
-      partitionWithSize <- ZIO.effect(
-        df.rdd.mapPartitionsWithIndex { case (i, rows) => Iterator((i, rows.size)) }.collect.sortBy(_._1).map(_._2)
-      )
-      cumulativePartitionWithSize = partitionWithSize.tail.scan(partitionWithSize.head)(_ + _)
-    } yield {
-      // Spark udf to calculate id
-      val genId: UserDefinedFunction =
-        udf((partitionId: Int, rowNumber: Int) => cumulativePartitionWithSize(partitionId) + rowNumber)
-
-      val window = Window.partitionBy("pid")
-      df.withColumn("pid", spark_partition_id())
-        .withColumn("row_number", row_number().over(window))
-        .withColumn("id", genId(col("pid"), col("row_number")))
-        .drop("pid", "row_number")
-    }
+  def addId(df: DataFrame, lastMax: IDType): DataFrame =
+    SparkExtensions.zipWithIndex(df, lastMax + 1)
 
   override def process(jobTime: JobTime, df: DataFrame): ZIO[IDManagerService with Logging, Throwable, Unit] = {
 
@@ -90,14 +74,14 @@ final class VertexProcessorLive(spark: SparkSession, graph: JanusGraph, config: 
     for {
       idManager <- ZIO.access[IDManagerService](_.get)
       lastMax   <- idManager.fetchID(jobTime)
-      dfWithId  <- addId(df, lastMax)
+      dfWithId = addId(df, lastMax)
       // Write intermediate data
       // TODO: Repartition to generate desired number of output files
       _ <- ZIO.effect(
         dfWithId.write
           .format("parquet")
           .mode(mode)
-          .partitionBy("year", "month", "day", "hour")
+          .partitionBy(PartitionManager.partitionColumns: _*)
           .save(idManager.config.spark.dataPath)
       )
     } yield {

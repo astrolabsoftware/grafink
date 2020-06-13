@@ -82,12 +82,14 @@ case class PartitionManager(startDate: LocalDate, duration: Int) {
 
 object PartitionManager {
 
-  val paddedInt: Int => String = (i: Int) => s"${f"${i}%02d"}"
-
-  val dateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+  val paddedInt: Int => String       = (i: Int) => s"${f"${i}%02d"}"
+  val dateFormat: DateTimeFormatter  = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+  val partitionColumns: List[String] = List("year", "month", "day")
 
   def apply(duration: Int): PartitionManager = PartitionManager(LocalDate.now, duration)
 
   def toPathString(base: String, readPath: PartitionPath): String =
-    s"""$base/year=${readPath.year}/month=${readPath.month}/day=${readPath.day}""".stripMargin
+    partitionColumns
+      .zip(List(readPath.year, readPath.month, readPath.day))
+      .foldLeft(base)((a, b) => s"$a/${b._1}=${b._2}")
 }

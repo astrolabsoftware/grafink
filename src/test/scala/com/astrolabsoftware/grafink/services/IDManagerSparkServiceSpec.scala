@@ -15,7 +15,7 @@ import com.astrolabsoftware.grafink.utils.SparkTestEnv
 object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
 
   def spec: ZSpec[Environment, Failure] = suite("IDManagerSparkServiceSpec")(
-    testM("IDManagerSparkService will correctly 0 if no data exists") {
+    testM("IDManagerSparkService will correctly return -1 if no data exists") {
       val dateString    = "2019-02-03"
       val date          = LocalDate.parse(dateString, dateFormat)
       val dataPath      = "/iddata"
@@ -28,7 +28,7 @@ object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
       val sparkLayer            = SparkTestEnv.test
       val idManagerServiceLayer = (logger ++ sparkLayer ++ idConfigLayer) >>> IDManager.liveUSpark
 
-      assertM(app.provideLayer(Logger.live ++ idManagerServiceLayer))(equalTo(Some(0L)))
+      assertM(app.provideLayer(Logger.live ++ idManagerServiceLayer))(equalTo(-1L))
     }
   )
 }

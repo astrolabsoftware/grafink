@@ -70,7 +70,7 @@ object Reader {
                       .load(readPaths: _*)
                   )
                 }
-                colsToSelect = config.keepCols.map(col(_))
+                colsToSelect = config.keepCols.map(col(_)) ++ List(col("year"), col("month"), col("day"))
                 colsRenamed  = config.keepColsRenamed.map(c => col(c.f).as(c.t))
                 dfPruned     = df.select(colsToSelect ++ colsRenamed: _*)
               } yield dfPruned

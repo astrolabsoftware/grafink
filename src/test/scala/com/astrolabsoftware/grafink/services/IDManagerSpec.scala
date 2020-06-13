@@ -52,7 +52,7 @@ object IDManagerSpec extends DefaultRunnableSpec {
         app.provideLayer(
           (((mockEnv ++ Logger.test) ++ idConfigLayer ++ janusConfigLayer) >>> IDManager.liveUHbase) ++ Logger.test
         )
-      assertM(result)(equalTo(Some(1234L)))
+      assertM(result)(equalTo(id))
     }
   )
 }
