@@ -28,7 +28,7 @@ object JanusGraphEnv {
   type JanusGraphEnv = Has[JanusGraphEnv.Service]
 
   trait Service {
-    def graph: JanusGraph
+    val graph: JanusGraph
   }
 
   def make(
@@ -39,7 +39,7 @@ object JanusGraphEnv {
         .effectBlocking(graph)
         .map { jGraph =>
           Has(new Service {
-            override def graph: JanusGraph = jGraph(blockingWithConfig.get[JanusGraphConfig])
+            override val graph: JanusGraph = jGraph(blockingWithConfig.get[JanusGraphConfig])
           })
         }
     }

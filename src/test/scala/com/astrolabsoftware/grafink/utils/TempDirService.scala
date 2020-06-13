@@ -42,5 +42,4 @@ object TempDirService {
 
   def createTempDir(): ZIO[TempDirService with Console, Throwable, File]        = ZIO.accessM(_.get.createTempDir)
   def removeTempDir(t: File): ZIO[TempDirService with Console, Throwable, Unit] = ZIO.accessM(_.get.removeTempDir(t))
-
 }

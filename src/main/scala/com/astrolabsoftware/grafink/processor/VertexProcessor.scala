@@ -18,12 +18,13 @@ package com.astrolabsoftware.grafink.processor
 
 import org.apache.spark.sql.{ DataFrame, Row, SaveMode, SparkExtensions, SparkSession }
 import org.apache.tinkerpop.gremlin.structure.T
-import org.janusgraph.core.JanusGraph
 import org.janusgraph.graphdb.database.StandardJanusGraph
 import zio.{ Has, URLayer, ZIO, ZLayer }
+import zio.blocking.Blocking
 import zio.logging.Logging
 
-import com.astrolabsoftware.grafink.JanusGraphEnv.JanusGraphEnv
+import com.astrolabsoftware.grafink.JanusGraphEnv
+import com.astrolabsoftware.grafink.JanusGraphEnv.{ JanusGraphEnv, Service }
 import com.astrolabsoftware.grafink.Job.{ JobTime, SparkEnv }
 import com.astrolabsoftware.grafink.common.PartitionManager
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
@@ -37,18 +38,24 @@ object VertexProcessor {
   type VertexProcessorService = Has[VertexProcessor.Service]
 
   trait Service {
+    def processData(jobTime: JobTime, df: DataFrame): ZIO[IDManagerService with Logging, Throwable, DataFrame]
     def process(jobTime: JobTime, df: DataFrame): ZIO[IDManagerService with Logging, Throwable, Unit]
     def load(df: DataFrame): ZIO[Logging, Throwable, Unit]
   }
 
-  val live: URLayer[SparkEnv with Has[JanusGraphConfig] with JanusGraphEnv with Logging, VertexProcessorService] =
+  val live: URLayer[SparkEnv with Has[JanusGraphConfig] with Logging, VertexProcessorService] =
     ZLayer.fromEffect(
       for {
         spark            <- ZIO.access[SparkEnv](_.get.sparkEnv)
-        graph            <- ZIO.access[JanusGraphEnv](_.get.graph)
         janusGraphConfig <- Config.janusGraphConfig
-      } yield new VertexProcessorLive(spark, graph, janusGraphConfig)
+      } yield new VertexProcessorLive(spark, janusGraphConfig)
     )
+
+  def processData(
+    jobTime: JobTime,
+    df: DataFrame
+  ): ZIO[VertexProcessorService with IDManagerService with Logging, Throwable, DataFrame] =
+    ZIO.accessM(_.get.processData(jobTime, df))
 
   def process(
     jobTime: JobTime,
@@ -61,13 +68,12 @@ object VertexProcessor {
 
 }
 
-final class VertexProcessorLive(spark: SparkSession, graph: JanusGraph, config: JanusGraphConfig)
-    extends VertexProcessor.Service {
+final class VertexProcessorLive(spark: SparkSession, config: JanusGraphConfig) extends VertexProcessor.Service {
 
   def addId(df: DataFrame, lastMax: IDType): DataFrame =
     SparkExtensions.zipWithIndex(df, lastMax + 1)
 
-  override def process(jobTime: JobTime, df: DataFrame): ZIO[IDManagerService with Logging, Throwable, Unit] = {
+  def processData(jobTime: JobTime, df: DataFrame): ZIO[IDManagerService with Logging, Throwable, DataFrame] = {
 
     val mode = SaveMode.Append
 
@@ -84,29 +90,41 @@ final class VertexProcessorLive(spark: SparkSession, graph: JanusGraph, config: 
           .partitionBy(PartitionManager.partitionColumns: _*)
           .save(idManager.config.spark.dataPath)
       )
-    } yield {
-      // Finally load to Janusgraph
-      load(dfWithId)
-    }
+    } yield dfWithId
   }
+
+  override def process(jobTime: JobTime, df: DataFrame): ZIO[IDManagerService with Logging, Throwable, Unit] =
+    for {
+      dfWithId <- processData(jobTime, df)
+      // Finally load to Janusgraph
+      _ <- load(dfWithId)
+    } yield ()
 
   override def load(df: DataFrame): ZIO[Logging, Throwable, Unit] = {
 
-    val getId: Row => Long = r => r.getAs[Long]("id")
-    val serializableGraph  = graph
-    val batchSize          = config.vertexLoader.batchSize
+    val c = config
 
     def loaderFunc: (Iterator[Row]) => Unit = (partition: Iterator[Row]) => {
 
-      // Ugly but unfortunate result of API structure
-      val idManager = graph.asInstanceOf[StandardJanusGraph].getIDManager
+      val batchSize          = c.vertexLoader.batchSize
+      val getId: Row => Long = r => r.getAs[Long]("id")
 
-      partition.grouped(batchSize).foreach { group =>
-        val params: Row => Seq[AnyRef] = r => Seq(T.id, java.lang.Long.valueOf(idManager.toVertexId(getId(r))))
-        group.foreach(r => serializableGraph.addVertex(params(r)))
-        serializableGraph.tx.commit
-      }
-      serializableGraph.tx.commit
+      val janusGraphLayer = (Blocking.live ++ ZLayer.succeed(c)) >>> JanusGraphEnv.hbase()
+
+      val executorJob =
+        for {
+          graph <- ZIO.access[JanusGraphEnv](_.get.graph)
+          idManager = graph.asInstanceOf[StandardJanusGraph].getIDManager
+          _ <- ZIO.effect(partition.grouped(batchSize).foreach { group =>
+            val params: Row => Seq[AnyRef] = r => Seq(T.id, java.lang.Long.valueOf(idManager.toVertexId(getId(r))))
+            group.foreach(r => graph.addVertex(params(r)))
+            graph.tx.commit
+          })
+          _ <- ZIO.effect(graph.tx.commit)
+        } yield ()
+
+      zio.Runtime.default.unsafeRun(executorJob.provideLayer(janusGraphLayer))
+
     }
 
     val load = loaderFunc
