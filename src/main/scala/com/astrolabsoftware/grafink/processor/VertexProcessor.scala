@@ -25,7 +25,7 @@ import zio.blocking.Blocking
 import zio.logging.Logging
 
 import com.astrolabsoftware.grafink.JanusGraphEnv
-import com.astrolabsoftware.grafink.JanusGraphEnv.{ JanusGraphEnv, Service }
+import com.astrolabsoftware.grafink.JanusGraphEnv.JanusGraphEnv
 import com.astrolabsoftware.grafink.Job.{ JobTime, SparkEnv }
 import com.astrolabsoftware.grafink.common.{ PartitionManager, Utils }
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
@@ -146,9 +146,7 @@ final class VertexProcessorLive(spark: SparkSession, config: JanusGraphConfig) e
           }) */
           // _ <- ZIO.effect(graph.tx.commit)
         } yield ()
-
       zio.Runtime.default.unsafeRun(executorJob.provideLayer(janusGraphLayer))
-
     }
 
     val load = loaderFunc

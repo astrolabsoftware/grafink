@@ -18,13 +18,9 @@ package com.astrolabsoftware.grafink
 
 import java.time.LocalDate
 
-import org.janusgraph.core.JanusGraph
 import zio._
-import zio.blocking.Blocking
-import zio.console.Console
 import zio.logging.Logging
 
-import com.astrolabsoftware.grafink.JanusGraphEnv.{ JanusGraphEnv, Service }
 import com.astrolabsoftware.grafink.common.PartitionManager
 import com.astrolabsoftware.grafink.models.config._
 import com.astrolabsoftware.grafink.processor.VertexProcessor
@@ -43,7 +39,6 @@ object Job {
   type SparkEnv = Has[SparkEnv.Service]
   type RunEnv =
     SparkEnv
-      with JanusGraphEnv
       with GrafinkConfig
       with SchemaLoaderService
       with ReaderService
@@ -58,10 +53,15 @@ object Job {
         janusGraphConfig <- Config.janusGraphConfig
         partitionManager = PartitionManager(jobTime.day, jobTime.duration)
         // read data
-        df    <- Reader.read(partitionManager)
-        graph <- ZIO.effect(JanusGraphEnv.withHBaseStorage(janusGraphConfig))
-        // load schema
-        _ <- SchemaLoader.loadSchema(graph, df.schema)
+        df <- Reader.read(partitionManager)
+        _ <- JanusGraphEnv
+          .hbaseBasic(janusGraphConfig)
+          .use(graph =>
+            for {
+              // load schema
+              _ <- SchemaLoader.loadSchema(graph, df.schema)
+            } yield ()
+          )
         // Process vertices
         _ <- VertexProcessor.process(jobTime, df)
       } yield ()

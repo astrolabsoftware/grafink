@@ -32,23 +32,26 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
           StructField("random", DoubleType)
         )
       )
-      val app =
-        for {
-          graph <- JanusGraphTestEnv.graph
-          _     <- SchemaLoader.loadSchema(graph, dataSchema)
-        } yield (graph.getVertexLabel("type").mappedProperties().asScala.toList.map(_.name))
 
-      val janusConfig = ZLayer.succeed(
+      val janusConfig =
         JanusGraphConfig(
           SchemaConfig(vertexPropertyCols = vertexPeroperties, vertexLabel = "type", edgeLabels = List()),
           VertexLoaderConfig(10),
           JanusGraphStorageConfig("", 0, tableName = "test")
         )
-      )
+
+      val app =
+        for {
+          output <- JanusGraphTestEnv.test(janusConfig).use { graph =>
+            for {
+              _ <- SchemaLoader.loadSchema(graph, dataSchema)
+            } yield (graph.getVertexLabel("type").mappedProperties().asScala.toList.map(_.name))
+          }
+        } yield output
+
       val logger            = Logger.test
-      val janusLayer        = (janusConfig ++ Blocking.live) >>> JanusGraphTestEnv.test
-      val schemaLoaderLayer = (janusConfig ++ janusLayer ++ logger) >>> SchemaLoader.live
-      val layer             = schemaLoaderLayer ++ logger ++ janusLayer
+      val schemaLoaderLayer = (ZLayer.succeed(janusConfig) ++ logger) >>> SchemaLoader.live
+      val layer             = schemaLoaderLayer ++ logger
       assertM(app.provideLayer(layer))(equalTo(vertexPeroperties))
     }
   )

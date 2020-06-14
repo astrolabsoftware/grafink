@@ -75,16 +75,14 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
       val logger     = Logger.test
       val readerConfig =
         ZLayer.succeed(ReaderConfig(path, Parquet, keepCols = List("objectId"), keepColsRenamed = List()))
-      val janusConfig = ZLayer.succeed(
+      val janusConfig =
         JanusGraphConfig(
           SchemaConfig(vertexPropertyCols = List(""), vertexLabel = "", edgeLabels = List()),
           VertexLoaderConfig(10),
           JanusGraphStorageConfig("", 0, tableName = "test")
         )
-      )
 
-      val janusLayer = (janusConfig ++ Blocking.live) >>> JanusGraphTestEnv.test
-      val jobTime    = JobTime(date, 1)
+      val jobTime = JobTime(date, 1)
 
       val tempDirServiceLayer = ((zio.console.Console.live) >>> TempDirService.test)
       val runtime             = zio.Runtime.default
@@ -96,18 +94,23 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
 
       val app = for {
         spark <- SparkTestEnv.sparkEnv
-        graph <- JanusGraphTestEnv.graph
-        df    <- Reader.read(PartitionManager(date, 1))
-        _     <- VertexProcessor.process(jobTime, df)
-        g = graph.traversal()
-      } yield g.V().toList.asScala.map(_.property("objectId").value().toString).toList
+        output <- JanusGraphTestEnv
+          .test(janusConfig)
+          .use(graph =>
+            for {
+              df <- Reader.read(PartitionManager(date, 1))
+              _  <- VertexProcessor.process(jobTime, df)
+              g = graph.traversal()
+            } yield g.V().toList.asScala.map(_.property("objectId").value().toString).toList
+          )
+      } yield (output)
 
       val readerLayer = (logger ++ readerConfig ++ sparkLayer) >>> Reader.live
       val idManagerLayer =
         (logger ++ sparkLayer ++ ((tempDirServiceLayer ++ TestConsole.debug) >>> idManagerConfig)) >>> IDManager.liveUSpark
-      val vertexProcessorLayer = (sparkLayer ++ janusConfig ++ janusLayer ++ logger) >>> VertexProcessor.live
+      val vertexProcessorLayer = (sparkLayer ++ ZLayer.succeed(janusConfig) ++ logger) >>> VertexProcessor.live
       val layer =
-        tempDirServiceLayer ++ TestConsole.debug ++ vertexProcessorLayer ++ idManagerLayer ++ logger ++ readerLayer ++ janusLayer ++ sparkLayer
+        tempDirServiceLayer ++ TestConsole.debug ++ vertexProcessorLayer ++ idManagerLayer ++ logger ++ readerLayer ++ sparkLayer
 
       assertM(app.provideLayer(layer))(
         hasSameElementsDistinct(List("ZTF19acmcetc", "ZTF17aaanypg", "ZTF19acmbxka", "ZTF19acmbxfe", "ZTF19acmbtac"))

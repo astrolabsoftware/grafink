@@ -18,12 +18,13 @@ package com.astrolabsoftware.grafink
 
 import org.janusgraph.core.{ JanusGraph, JanusGraphFactory }
 import org.janusgraph.diskstorage.util.time.TimestampProviders
-import zio.{ Has, ZLayer }
+import zio.{ Has, ZIO, ZLayer, ZManaged }
 import zio.blocking.Blocking
+import zio.logging.{ log, Logging }
 
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
 
-object JanusGraphEnv {
+object JanusGraphEnv extends Serializable {
 
   type JanusGraphEnv = Has[JanusGraphEnv.Service]
 
@@ -44,14 +45,29 @@ object JanusGraphEnv {
         }
     }
 
-  def hbaseBasic(): ZLayer[Blocking with Has[JanusGraphConfig], Throwable, Has[Service]] =
-    make(config => withHBaseStorage(config))
-
   def hbase(): ZLayer[Blocking with Has[JanusGraphConfig], Throwable, Has[Service]] =
     make(config => withHBaseStorageWithBulkLoad(config))
 
-  def inmemory(): ZLayer[Blocking with Has[JanusGraphConfig], Throwable, Has[Service]] =
-    make(inMemoryStorage(_))
+  private def releaseGraph: JanusGraph => zio.URIO[Any, ZIO[Logging, Nothing, Unit]] =
+    (graph: JanusGraph) =>
+      ZIO
+        .effect(graph.close())
+        .fold(_ => log.error(s"Error closing janusgraph instance"), _ => log.info(s"JanusGraph instance closed"))
+
+  def hbaseBasic(config: JanusGraphConfig): ZManaged[Logging, Throwable, JanusGraph] =
+    ZIO
+      .effect(withHBaseStorage(config))
+      .toManaged(releaseGraph)
+
+  def hbase(config: JanusGraphConfig): ZManaged[Logging, Throwable, JanusGraph] =
+    ZIO
+      .effect(withHBaseStorageWithBulkLoad(config))
+      .toManaged(releaseGraph)
+
+  def inmemory(config: JanusGraphConfig): ZManaged[Logging, Throwable, JanusGraph] =
+    ZIO
+      .effect(inMemoryStorage(config))
+      .toManaged(releaseGraph)
 
   def inMemoryStorage: JanusGraphConfig => JanusGraph =
     config =>

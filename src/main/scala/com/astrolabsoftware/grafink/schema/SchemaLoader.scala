@@ -16,23 +16,11 @@
  */
 package com.astrolabsoftware.grafink.schema
 
-import org.apache.spark.sql.types.{
-  BinaryType,
-  BooleanType,
-  ByteType,
-  DataType,
-  DoubleType,
-  FloatType,
-  IntegerType,
-  LongType,
-  StringType,
-  StructType
-}
+import org.apache.spark.sql.types.{ DataType, StructType }
 import org.janusgraph.core.JanusGraph
 import zio.{ Has, URLayer, ZIO, ZLayer }
 import zio.logging.Logging
 
-import com.astrolabsoftware.grafink.JanusGraphEnv.JanusGraphEnv
 import com.astrolabsoftware.grafink.common.Utils
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
 import com.astrolabsoftware.grafink.models.config.Config
@@ -69,7 +57,7 @@ object SchemaLoader {
                 graph.makePropertyKey(m).dataType(dType).make
               }
             )
-            _ = graph.addProperties(vertextLabel, vertexProperties: _*)
+            _ <- ZIO.effect(graph.addProperties(vertextLabel, vertexProperties: _*))
             _ <- ZIO.effect(graph.tx.commit)
             _ <- ZIO.effect(edgeLabels.map(graph.makeEdgeLabel).foreach(_.make))
             _ <- ZIO.effect(graph.tx.commit)
@@ -81,7 +69,7 @@ object SchemaLoader {
   def loadSchema(
     graph: JanusGraph,
     dataSchema: StructType
-  ): ZIO[SchemaLoaderService with Logging with JanusGraphEnv, Throwable, Unit] =
+  ): ZIO[SchemaLoaderService with Logging, Throwable, Unit] =
     ZIO.accessM(_.get.loadSchema(graph, dataSchema))
 
 }
