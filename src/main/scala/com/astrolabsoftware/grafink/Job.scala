@@ -56,12 +56,12 @@ object Job {
     jobTime =>
       for {
         janusGraphConfig <- Config.janusGraphConfig
-        graph            <- ZIO.effect(JanusGraphEnv.withHBaseStorage(janusGraphConfig))
-        // load schema
-        _ <- SchemaLoader.loadSchema(graph)
         partitionManager = PartitionManager(jobTime.day, jobTime.duration)
         // read data
-        df <- Reader.read(partitionManager)
+        df    <- Reader.read(partitionManager)
+        graph <- ZIO.effect(JanusGraphEnv.withHBaseStorage(janusGraphConfig))
+        // load schema
+        _ <- SchemaLoader.loadSchema(graph, df.schema)
         // Process vertices
         _ <- VertexProcessor.process(jobTime, df)
       } yield ()

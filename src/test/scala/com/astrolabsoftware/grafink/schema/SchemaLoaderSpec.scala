@@ -2,6 +2,7 @@ package com.astrolabsoftware.grafink.schema
 
 import scala.collection.JavaConverters._
 
+import org.apache.spark.sql.types.{ DoubleType, FloatType, IntegerType, StringType, StructField, StructType }
 import zio.{ ZIO, ZLayer }
 import zio.blocking.Blocking
 import zio.test.{ DefaultRunnableSpec, _ }
@@ -23,10 +24,18 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
   def spec: ZSpec[Environment, Failure] = suite("SchemaLoaderSpec")(
     testM("Schema Loader will successfully create janusgraph schema") {
       val vertexPeroperties = List("rfscore", "snn")
+      val dataSchema = StructType(
+        List(
+          StructField("rfscore", IntegerType),
+          StructField("notused", StringType),
+          StructField("snn", FloatType),
+          StructField("random", DoubleType)
+        )
+      )
       val app =
         for {
           graph <- JanusGraphTestEnv.graph
-          _     <- SchemaLoader.loadSchema(graph)
+          _     <- SchemaLoader.loadSchema(graph, dataSchema)
         } yield (graph.getVertexLabel("type").mappedProperties().asScala.toList.map(_.name))
 
       val janusConfig = ZLayer.succeed(

@@ -50,8 +50,8 @@ final class IDManagerSparkService(spark: SparkSession, _config: IDManagerConfig)
       // Catch case where there is no data to read, this means this is being run on a new setup
       case e: org.apache.spark.sql.AnalysisException if e.message.contains("Unable to infer schema for Parquet") =>
         for {
-          _ <- log.warn(s"No data found at ${config.spark.dataPath}, returning -1")
-        } yield -1L
+          _ <- log.warn(s"No data found at ${config.spark.dataPath}, returning 0")
+        } yield 0L
     }
   }
 }

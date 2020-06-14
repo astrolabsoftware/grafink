@@ -65,7 +65,7 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
       val layer =
         tempDirServiceLayer ++ TestConsole.debug ++ vertexProcessorLayer ++ idManagerLayer ++ logger ++ readerLayer ++ sparkLayer
 
-      assertM(app.provideLayer(layer))(hasSameElementsDistinct(Array[Long](0, 1, 2, 3, 4)))
+      assertM(app.provideLayer(layer))(hasSameElementsDistinct(Array[Long](1, 2, 3, 4, 5)))
     },
     testM("VertexProcessor will correctly add input alerts into janusgraph") {
       val dateString = "2019-02-01"

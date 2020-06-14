@@ -2,9 +2,9 @@ package com.astrolabsoftware.grafink.services
 
 import java.time.LocalDate
 
+import zio.ZLayer
 import zio.test._
 import zio.test.Assertion._
-import zio.ZLayer
 
 import com.astrolabsoftware.grafink.Job.JobTime
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
@@ -28,7 +28,7 @@ object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
       val sparkLayer            = SparkTestEnv.test
       val idManagerServiceLayer = (logger ++ sparkLayer ++ idConfigLayer) >>> IDManager.liveUSpark
 
-      assertM(app.provideLayer(Logger.live ++ idManagerServiceLayer))(equalTo(-1L))
+      assertM(app.provideLayer(Logger.live ++ idManagerServiceLayer))(equalTo(0L))
     }
   )
 }
