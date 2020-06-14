@@ -16,6 +16,7 @@
  */
 package com.astrolabsoftware.grafink.schema
 
+import org.janusgraph.core.JanusGraph
 import zio.{ Has, URLayer, ZIO, ZLayer }
 import zio.logging.Logging
 
@@ -28,37 +29,37 @@ object SchemaLoader {
   type SchemaLoaderService = Has[SchemaLoader.Service]
 
   trait Service {
-    def loadSchema(): ZIO[Logging with JanusGraphEnv, Throwable, Unit]
+    def loadSchema(graph: JanusGraph): ZIO[Logging, Throwable, Unit]
   }
 
-  val live: URLayer[JanusGraphEnv with Logging with Has[JanusGraphConfig], SchemaLoaderService] =
+  val live: URLayer[Logging with Has[JanusGraphConfig], SchemaLoaderService] =
     ZLayer.fromEffect(
       for {
-        graph            <- ZIO.access[JanusGraphEnv](_.get.graph)
         janusGraphConfig <- Config.janusGraphConfig
       } yield new Service {
-        override def loadSchema(): ZIO[Logging with JanusGraphEnv, Throwable, Unit] = {
+        override def loadSchema(graph: JanusGraph): ZIO[Logging, Throwable, Unit] = {
 
           val edgeLabels = janusGraphConfig.schema.edgeLabels
-          val e          = edgeLabels.map(graph.makeEdgeLabel)
 
           val vertexPropertyCols = janusGraphConfig.schema.vertexPropertyCols
 
           for {
             vertextLabel <- ZIO.effect(graph.makeVertexLabel(janusGraphConfig.schema.vertexLabel).make)
+            _            <- ZIO.effect(graph.tx.commit)
             // TODO: Detect the data type from input data types
             vertexProperties <- ZIO.effect(
               vertexPropertyCols.map(m => graph.makePropertyKey(m).dataType(classOf[String]).make)
             )
             _ = graph.addProperties(vertextLabel, vertexProperties: _*)
-            _ <- ZIO.effect(e.foreach(_.make))
+            _ <- ZIO.effect(graph.tx.commit)
+            _ <- ZIO.effect(edgeLabels.map(graph.makeEdgeLabel).foreach(_.make))
             _ <- ZIO.effect(graph.tx.commit)
           } yield ()
         }
       }
     )
 
-  def loadSchema(): ZIO[SchemaLoaderService with Logging with JanusGraphEnv, Throwable, Unit] =
-    ZIO.accessM(_.get.loadSchema())
+  def loadSchema(graph: JanusGraph): ZIO[SchemaLoaderService with Logging with JanusGraphEnv, Throwable, Unit] =
+    ZIO.accessM(_.get.loadSchema(graph))
 
 }

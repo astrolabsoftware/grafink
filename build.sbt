@@ -29,7 +29,8 @@ assemblyJarName in assembly := s"${name.value}-${version.value}.jar"
 // https://stackoverflow.com/questions/43611147/spark-not-working-with-pureconfig
 assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("shapeless.**" -> "shadeshapless.@1").inAll,
-  ShadeRule.rename("io.netty.**" -> "shadenetty.@1").inAll
+  ShadeRule.rename("io.netty.**" -> "shadenetty.@1").inAll,
+  ShadeRule.rename("com.google.common.**" -> "shadedgoogledeps.@1").inAll
 )
 
 assemblyMergeStrategy in assembly := {

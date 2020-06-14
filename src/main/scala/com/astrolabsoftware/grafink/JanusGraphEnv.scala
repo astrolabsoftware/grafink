@@ -44,8 +44,29 @@ object JanusGraphEnv {
         }
     }
 
+  def hbaseBasic(): ZLayer[Blocking with Has[JanusGraphConfig], Throwable, Has[Service]] =
+    make(config => withHBaseStorage(config))
+
   def hbase(): ZLayer[Blocking with Has[JanusGraphConfig], Throwable, Has[Service]] =
-    make { config =>
+    make(config => withHBaseStorageWithBulkLoad(config))
+
+  def inmemory(): ZLayer[Blocking with Has[JanusGraphConfig], Throwable, Has[Service]] =
+    make(inMemoryStorage(_))
+
+  def inMemoryStorage: JanusGraphConfig => JanusGraph =
+    config =>
+      JanusGraphFactory.build
+      // Use hbase as storage backend
+        .set("storage.backend", "inmemory")
+        .set("schema.default", "none")
+        // Manual transactions
+        .set("storage.transactions", false)
+        // Allow setting vertex ids
+        .set("graph.set-vertex-id", true)
+        .open()
+
+  def withHBaseStorage: JanusGraphConfig => JanusGraph =
+    config =>
       JanusGraphFactory.build
       // Use hbase as storage backend
         .set("storage.backend", "hbase")
@@ -54,20 +75,24 @@ object JanusGraphEnv {
         .set("storage.hostname", config.storage.host)
         // Use the configured table name
         .set("storage.hbase.table", config.storage.tableName)
+        .set("schema.default", "none")
         // Manual transactions
         .set("storage.transactions", false)
-        // Use batch loading
-        .set("storage.batch-loading", true)
         // Allow setting vertex ids
         .set("graph.set-vertex-id", true)
         .open()
-    }
 
-  def inmemory(): ZLayer[Blocking with Has[JanusGraphConfig], Throwable, Has[Service]] =
-    make { _ =>
+  def withHBaseStorageWithBulkLoad: JanusGraphConfig => JanusGraph =
+    config =>
       JanusGraphFactory.build
       // Use hbase as storage backend
-        .set("storage.backend", "inmemory")
+        .set("storage.backend", "hbase")
+        .set("graph.timestamps", TimestampProviders.MILLI)
+        // Configure hbase as storage backend
+        .set("storage.hostname", config.storage.host)
+        // Use the configured table name
+        .set("storage.hbase.table", config.storage.tableName)
+        .set("schema.default", "none")
         // Manual transactions
         .set("storage.transactions", false)
         // Use batch loading
@@ -75,5 +100,4 @@ object JanusGraphEnv {
         // Allow setting vertex ids
         .set("graph.set-vertex-id", true)
         .open()
-    }
 }
