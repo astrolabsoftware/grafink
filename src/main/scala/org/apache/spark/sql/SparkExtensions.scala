@@ -25,6 +25,8 @@ object SparkExtensions {
 
   /**
    * Optimized Spark SQL equivalent of RDD.zipWithIndex.
+   * Avoids the serialization / deserialization from/to df's InternalRow's
+   * underlying bytes array <--> GenericRow's underlying JVM objects collection Array[Any])
    *
    * @param df
    * @param offset Index offset from where to start assigning ids

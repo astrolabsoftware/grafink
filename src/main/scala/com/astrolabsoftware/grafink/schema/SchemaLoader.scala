@@ -16,10 +16,12 @@
  */
 package com.astrolabsoftware.grafink.schema
 
-import org.apache.spark.sql.types.{ DataType, StructType }
+import org.apache.spark.sql.types.{DataType, StructType}
+import org.apache.tinkerpop.gremlin.structure.VertexProperty.Cardinality
 import org.janusgraph.core.JanusGraph
-import zio.{ Has, URLayer, ZIO, ZLayer }
-import zio.logging.Logging
+import org.janusgraph.core.Multiplicity._
+import zio.{Has, URLayer, ZIO, ZLayer}
+import zio.logging.{log, Logging}
 
 import com.astrolabsoftware.grafink.common.Utils
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
@@ -48,19 +50,38 @@ object SchemaLoader {
             dataSchema.fields.map(f => f.name -> f.dataType).toMap
 
           for {
-            vertextLabel <- ZIO.effect(graph.makeVertexLabel(janusGraphConfig.schema.vertexLabel).make)
-            _            <- ZIO.effect(graph.tx.commit)
+            mgmt <- ZIO.effect(graph.openManagement())
+            vertextLabel <- ZIO.effect(mgmt.makeVertexLabel(janusGraphConfig.schema.vertexLabel).make)
+            // _            <- ZIO.effect(mgmt.commit)
             // TODO: Detect the data type from input data types
             vertexProperties <- ZIO.effect(
               vertexPropertyCols.map { m =>
                 val dType = Utils.getClassTag(dataTypeForVertexPropertyCols(m))
-                graph.makePropertyKey(m).dataType(dType).make
+                mgmt.makePropertyKey(m).dataType(dType).make
               }
             )
-            _ <- ZIO.effect(graph.addProperties(vertextLabel, vertexProperties: _*))
-            _ <- ZIO.effect(graph.tx.commit)
-            _ <- ZIO.effect(edgeLabels.map(graph.makeEdgeLabel).foreach(_.make))
-            _ <- ZIO.effect(graph.tx.commit)
+            _ <- ZIO.effect(mgmt.addProperties(vertextLabel, vertexProperties: _*))
+            // TODO make this better
+            _ <- ZIO.collectAll_(edgeLabels.map(l =>
+             for {
+               label <- ZIO.effect(mgmt.makeEdgeLabel(l.name).multiplicity(MULTI).make)
+               labelWithProperty <- if (!l.properties.isEmpty) {
+                 // An edgelabel cardinality can only be SINGLE
+                 // scalastyle:off
+                 // https://github.com/JanusGraph/janusgraph/blob/master/janusgraph-core/src/main/java/org/janusgraph/graphdb/transaction/StandardJanusGraphTx.java#L924
+                 // scalastyle:on
+                 val k = l.properties("key")
+                 val v = l.properties("typ")
+                 for {
+                   property <- ZIO.effect(mgmt.makePropertyKey(k).dataType(Utils.getClassTagFromString(v)).cardinality(Cardinality.single).make)
+                   editedLabel <- ZIO.effect(mgmt.addProperties(label, property))
+                 } yield editedLabel
+               } else ZIO.succeed(label)
+             } yield labelWithProperty)
+            )
+            _ <- ZIO.effect(mgmt.commit).tapBoth(
+              e => log.info(s"Something went wrong while creating schema $e"), s => log.info(s"Successfully created Table schema")
+            )
           } yield ()
         }
       }

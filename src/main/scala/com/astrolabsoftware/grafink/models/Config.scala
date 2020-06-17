@@ -31,19 +31,28 @@ case class HBaseZookeeperConfig(quoram: String)
 
 case class HBaseConfig(zookeeper: HBaseZookeeperConfig)
 
-case class SchemaConfig(vertexPropertyCols: List[String], vertexLabel: String, edgeLabels: List[String])
+case class EdgeLabelConfig(name: String, properties: Map[String, String])
+
+case class SchemaConfig(vertexPropertyCols: List[String], vertexLabel: String, edgeLabels: List[EdgeLabelConfig])
 
 case class VertexLoaderConfig(batchSize: Int)
 
+case class SimilarityConfig(vertexPropertyCols: List[String], parallelism: Int)
+
+case class EdgeRulesConfig(similarityClassifer: SimilarityConfig)
+
+case class EdgeLoaderConfig(batchSize: Int, rules: EdgeRulesConfig)
+
 case class JanusGraphStorageConfig(host: String, port: Int, tableName: String)
 
-case class JanusGraphConfig(schema: SchemaConfig, vertexLoader: VertexLoaderConfig, storage: JanusGraphStorageConfig)
+case class JanusGraphConfig(schema: SchemaConfig, vertexLoader: VertexLoaderConfig, edgeLoader: EdgeLoaderConfig, storage: JanusGraphStorageConfig)
 
 case class SparkPathConfig(dataPath: String)
 
 case class HBaseColumnConfig(tableName: String, cf: String, qualifier: String)
 
 case class IDManagerConfig(spark: SparkPathConfig, hbase: HBaseColumnConfig)
+
 
 final case class GrafinkConfiguration(
   reader: ReaderConfig,

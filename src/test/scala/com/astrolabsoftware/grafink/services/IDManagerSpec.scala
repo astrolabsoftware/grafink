@@ -2,7 +2,7 @@ package com.astrolabsoftware.grafink.services
 
 import java.time.LocalDate
 
-import zio.{ ULayer, ZLayer }
+import zio.{ULayer, ZLayer}
 import zio.test._
 import zio.test.Assertion._
 import zio.test.DefaultRunnableSpec
@@ -13,15 +13,7 @@ import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.hbase.HBaseClientService.HBaseClientService
 import com.astrolabsoftware.grafink.hbase.HBaseClientServiceMock
 import com.astrolabsoftware.grafink.logging.Logger
-import com.astrolabsoftware.grafink.models.{
-  HBaseColumnConfig,
-  IDManagerConfig,
-  JanusGraphConfig,
-  JanusGraphStorageConfig,
-  SchemaConfig,
-  SparkPathConfig,
-  VertexLoaderConfig
-}
+import com.astrolabsoftware.grafink.models.{EdgeLoaderConfig, EdgeRulesConfig, HBaseColumnConfig, IDManagerConfig, JanusGraphConfig, JanusGraphStorageConfig, SchemaConfig, SimilarityConfig, SparkPathConfig, VertexLoaderConfig}
 
 object IDManagerSpec extends DefaultRunnableSpec {
 
@@ -37,8 +29,9 @@ object IDManagerSpec extends DefaultRunnableSpec {
       val janusConfigLayer =
         ZLayer.succeed(
           JanusGraphConfig(
-            SchemaConfig(List(""), "", List("")),
+            SchemaConfig(List(""), "", List()),
             VertexLoaderConfig(10),
+            EdgeLoaderConfig(10, EdgeRulesConfig(SimilarityConfig(List(), 1))),
             JanusGraphStorageConfig("", 0, janusGraphTableName)
           )
         )

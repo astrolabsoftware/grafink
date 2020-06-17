@@ -74,7 +74,6 @@ object JanusGraphEnv extends Serializable {
       JanusGraphFactory.build
       // Use hbase as storage backend
         .set("storage.backend", "inmemory")
-        .set("schema.default", "none")
         // Manual transactions
         .set("storage.transactions", false)
         // Allow setting vertex ids
@@ -91,7 +90,6 @@ object JanusGraphEnv extends Serializable {
         .set("storage.hostname", config.storage.host)
         // Use the configured table name
         .set("storage.hbase.table", config.storage.tableName)
-        .set("schema.default", "none")
         // Manual transactions
         .set("storage.transactions", false)
         // Allow setting vertex ids

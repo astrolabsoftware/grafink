@@ -2,21 +2,13 @@ package com.astrolabsoftware.grafink.schema
 
 import scala.collection.JavaConverters._
 
-import org.apache.spark.sql.types.{ DoubleType, FloatType, IntegerType, StringType, StructField, StructType }
-import zio.{ ZIO, ZLayer }
-import zio.blocking.Blocking
-import zio.test.{ DefaultRunnableSpec, _ }
+import org.apache.spark.sql.types.{DoubleType, FloatType, IntegerType, StringType, StructField, StructType}
+import zio.{ZIO, ZLayer}
+import zio.test.{DefaultRunnableSpec, _}
 import zio.test.Assertion._
-import zio.test.environment.TestConsole
 
 import com.astrolabsoftware.grafink.logging.Logger
-import com.astrolabsoftware.grafink.models.{
-  JanusGraphConfig,
-  JanusGraphStorageConfig,
-  SchemaConfig,
-  VertexLoaderConfig
-}
-import com.astrolabsoftware.grafink.processor.VertexProcessorSpec.{ Environment, Failure }
+import com.astrolabsoftware.grafink.models.{EdgeLabelConfig, EdgeLoaderConfig, EdgeRulesConfig, JanusGraphConfig, JanusGraphStorageConfig, SchemaConfig, SimilarityConfig, VertexLoaderConfig}
 import com.astrolabsoftware.grafink.utils.JanusGraphTestEnv
 
 object SchemaLoaderSpec extends DefaultRunnableSpec {
@@ -35,9 +27,13 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
 
       val janusConfig =
         JanusGraphConfig(
-          SchemaConfig(vertexPropertyCols = vertexPeroperties, vertexLabel = "type", edgeLabels = List()),
+          SchemaConfig(
+            vertexPropertyCols = List("rfscore", "snn"),
+            vertexLabel = "type",
+            edgeLabels = List(EdgeLabelConfig("similarity", Map("key"->"value", "typ" -> "long")))),
           VertexLoaderConfig(10),
-          JanusGraphStorageConfig("", 0, tableName = "test")
+          EdgeLoaderConfig(100, EdgeRulesConfig(SimilarityConfig(List("rfscore"), 10))),
+          JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph")
         )
 
       val app =
@@ -45,14 +41,15 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
           output <- JanusGraphTestEnv.test(janusConfig).use { graph =>
             for {
               _ <- SchemaLoader.loadSchema(graph, dataSchema)
-            } yield (graph.getVertexLabel("type").mappedProperties().asScala.toList.map(_.name))
+            } yield graph.getVertexLabel("type").mappedProperties().asScala.toList.map(_.name) ++
+              graph.getEdgeLabel("similarity").mappedProperties().asScala.toList.map(_.name)
           }
         } yield output
 
       val logger            = Logger.test
       val schemaLoaderLayer = (ZLayer.succeed(janusConfig) ++ logger) >>> SchemaLoader.live
       val layer             = schemaLoaderLayer ++ logger
-      assertM(app.provideLayer(layer))(equalTo(vertexPeroperties))
+      assertM(app.provideLayer(layer))(equalTo(vertexPeroperties ++ List("value")))
     }
   )
 }

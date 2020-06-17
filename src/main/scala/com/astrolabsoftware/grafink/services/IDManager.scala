@@ -19,11 +19,11 @@ package com.astrolabsoftware.grafink.services
 import zio._
 import zio.logging.Logging
 
-import com.astrolabsoftware.grafink.Job.{ JobTime, SparkEnv }
+import com.astrolabsoftware.grafink.Job.{JobTime, SparkEnv}
 import com.astrolabsoftware.grafink.common.PartitionManager
 import com.astrolabsoftware.grafink.hbase.HBaseClientService
 import com.astrolabsoftware.grafink.hbase.HBaseClientService.HBaseClientService
-import com.astrolabsoftware.grafink.models.{ IDManagerConfig, JanusGraphConfig }
+import com.astrolabsoftware.grafink.models.{IDManagerConfig, JanusGraphConfig}
 import com.astrolabsoftware.grafink.models.GrafinkException.GetIdException
 import com.astrolabsoftware.grafink.models.config.Config
 import com.astrolabsoftware.grafink.services.IDManager.IDType
@@ -34,7 +34,6 @@ object IDManager {
   type IDManagerService = Has[IDManager.Service]
 
   trait Service {
-    def config: IDManagerConfig
     def fetchID(jobTime: JobTime): RIO[Logging, IDType]
   }
 
@@ -48,14 +47,6 @@ object IDManager {
       } yield new IDManagerHBaseService(client, idConfig, janusConfig)
     )
 
-  val liveUSpark: URLayer[Logging with SparkEnv with Has[IDManagerConfig], IDManagerService] =
-    ZLayer.fromEffect(
-      for {
-        spark  <- ZIO.access[SparkEnv](_.get.sparkEnv)
-        config <- Config.idManagerConfig
-      } yield new IDManagerSparkService(spark, config)
-    )
-
   def fetchID(jobTime: JobTime): RIO[IDManagerService with Logging, IDType] =
     RIO.accessM(_.get.fetchID(jobTime))
 }
@@ -66,13 +57,11 @@ final class IDManagerHBaseService(
   janusConfig: JanusGraphConfig
 ) extends IDManager.Service {
 
-  override val config: IDManagerConfig = idConfig
-
   override def fetchID(jobTime: JobTime): RIO[Logging, IDType] = {
     val key = makeIdKey(s"${jobTime.day.format(PartitionManager.dateFormat)}", janusConfig.storage.tableName)
     for {
-      res <- client.getFromTable(key, config.hbase.cf, config.hbase.qualifier, config.hbase.tableName)
-      _  = if (res.isEmpty) ZIO.fail(GetIdException(s"Error getting validId from hbase table ${config.hbase.tableName}"))
+      res <- client.getFromTable(key, idConfig.hbase.cf, idConfig.hbase.qualifier, idConfig.hbase.tableName)
+      _  = if (res.isEmpty) ZIO.fail(GetIdException(s"Error getting validId from hbase table ${idConfig.hbase.tableName}"))
       id = res.get.toLong
     } yield id
   }

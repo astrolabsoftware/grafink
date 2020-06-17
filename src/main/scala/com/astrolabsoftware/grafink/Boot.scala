@@ -29,9 +29,9 @@ import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models.GrafinkException
 import com.astrolabsoftware.grafink.models.GrafinkException.BadArgumentsException
 import com.astrolabsoftware.grafink.models.config.Config
-import com.astrolabsoftware.grafink.processor.VertexProcessor
+import com.astrolabsoftware.grafink.processor.{EdgeProcessor, VertexProcessor}
 import com.astrolabsoftware.grafink.schema.SchemaLoader
-import com.astrolabsoftware.grafink.services.IDManager
+import com.astrolabsoftware.grafink.services.{IDManager, IDManagerSparkService}
 import com.astrolabsoftware.grafink.services.reader.Reader
 
 /**
@@ -67,9 +67,10 @@ object Boot extends App {
         val sparkLayer  = ZLayer.requires[Blocking] >>> SparkEnv.cluster
         // val janusGraphLayer      = ZLayer.requires[Blocking] ++ configLayer >>> JanusGraphEnv.hbase
         val schemaLoaderLayer    = logger ++ configLayer >>> SchemaLoader.live
-        val idManagerLayer       = logger ++ sparkLayer ++ configLayer >>> IDManager.liveUSpark
+        val idManagerLayer       = logger ++ sparkLayer ++ configLayer >>> IDManagerSparkService.live
         val readerLayer          = logger ++ sparkLayer ++ configLayer >>> Reader.live
         val vertexProcessorLayer = logger ++ sparkLayer ++ configLayer >>> VertexProcessor.live
+        val edgeProcessorLayer   = logger ++ sparkLayer ++ configLayer >>> EdgeProcessor.live
 
         Job
           .runGrafinkJob(JobTime(argsConfig.startDate, argsConfig.duration))
@@ -80,6 +81,7 @@ object Boot extends App {
               readerLayer ++
               idManagerLayer ++
               vertexProcessorLayer ++
+              edgeProcessorLayer ++
               logger
           )
       case None =>

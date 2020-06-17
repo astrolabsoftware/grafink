@@ -38,6 +38,25 @@ object ConfigSpec extends DefaultRunnableSpec {
         val cfg = Config.hbaseConfig
         assertM(cfg.provideLayer(layer))(equalTo(HBaseConfig(HBaseZookeeperConfig(quoram = "localhost"))))
       },
+      testM("JanusGraphConfig is parsed correctly") {
+
+        val path = getClass.getResource("/application.conf").getPath
+
+        val layer = Logger.test >>> Config.live(path)
+
+        val cfg = Config.janusGraphConfig
+        assertM(cfg.provideLayer(layer))(equalTo(
+          JanusGraphConfig(
+            SchemaConfig(
+              vertexPropertyCols = List("rfscore", "snn"),
+              vertexLabel = "type",
+              edgeLabels = List(EdgeLabelConfig("similarity", Map("key"->"value", "typ" -> "long")))),
+            VertexLoaderConfig(10),
+            EdgeLoaderConfig(100, EdgeRulesConfig(SimilarityConfig(List("rfscore"), 10))),
+            JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph")
+          )
+        ))
+      },
       testM("Invalid config file throws") {
         val path  = getClass.getResource("/invalidapplication.conf").getPath
         val layer = Logger.test >>> Config.live(path)
