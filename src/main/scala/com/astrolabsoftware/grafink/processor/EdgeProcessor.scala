@@ -103,13 +103,16 @@ final class EdgeProcessorLive(spark: SparkSession, config: JanusGraphConfig) ext
             for {
               _ <- ZIO.collectAll_(
                 group.map { r =>
+                // TODO: Optimize
                   for {
                     // Safe to get here since we know its already loaded
-                    srcVertex <- getFromCacheOrGraph(g, idManager.toVertexId(r.src))
-                    dstVertex <- getFromCacheOrGraph(g, idManager.toVertexId(r.dst))
+                    srcVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.src))))
+                    dstVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.dst))))
                     // TODO: Derive the labels from schema config by extending MakeEdge class
                     _ <- ZIO.effect(srcVertex.addE( "similarity").to(dstVertex).property("value", r.label).iterate)
                     // Add reverse edge as well
+                    srcVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.src))))
+                    dstVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.dst))))
                     _ <- ZIO.effect(dstVertex.addE("similarity").to(srcVertex).property("value", r.label).iterate)
                   } yield ()
                 }
