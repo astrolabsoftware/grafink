@@ -16,6 +16,8 @@
  */
 package com.astrolabsoftware.grafink.schema
 
+import scala.collection.JavaConverters._
+
 import org.apache.spark.sql.types.{DataType, StructType}
 import org.apache.tinkerpop.gremlin.structure.VertexProperty.Cardinality
 import org.janusgraph.core.JanusGraph
@@ -40,9 +42,8 @@ object SchemaLoader {
       for {
         janusGraphConfig <- Config.janusGraphConfig
       } yield new Service {
-        // We can assume a flat schema here since we already flatten the schema while reading the data
-        override def loadSchema(graph: JanusGraph, dataSchema: StructType): ZIO[Logging, Throwable, Unit] = {
 
+        def load(graph: JanusGraph, dataSchema: StructType): ZIO[Logging, Throwable, Unit] = {
           val edgeLabels = janusGraphConfig.schema.edgeLabels
 
           val vertexPropertyCols = janusGraphConfig.schema.vertexPropertyCols
@@ -50,38 +51,56 @@ object SchemaLoader {
             dataSchema.fields.map(f => f.name -> f.dataType).toMap
 
           for {
-            mgmt <- ZIO.effect(graph.openManagement())
-            vertextLabel <- ZIO.effect(mgmt.makeVertexLabel(janusGraphConfig.schema.vertexLabel).make)
-            // _            <- ZIO.effect(mgmt.commit)
+            vertextLabel <- ZIO.effect(graph.makeVertexLabel(janusGraphConfig.schema.vertexLabel).make)
             // TODO: Detect the data type from input data types
             vertexProperties <- ZIO.effect(
               vertexPropertyCols.map { m =>
                 val dType = Utils.getClassTag(dataTypeForVertexPropertyCols(m))
-                mgmt.makePropertyKey(m).dataType(dType).make
+                graph.makePropertyKey(m).dataType(dType).make
               }
             )
-            _ <- ZIO.effect(mgmt.addProperties(vertextLabel, vertexProperties: _*))
+            _ <- ZIO.effect(graph.addProperties(vertextLabel, vertexProperties: _*))
             // TODO make this better
             _ <- ZIO.collectAll_(edgeLabels.map(l =>
-             for {
-               label <- ZIO.effect(mgmt.makeEdgeLabel(l.name).multiplicity(MULTI).make)
-               labelWithProperty <- if (!l.properties.isEmpty) {
-                 // An edgelabel cardinality can only be SINGLE
-                 // scalastyle:off
-                 // https://github.com/JanusGraph/janusgraph/blob/master/janusgraph-core/src/main/java/org/janusgraph/graphdb/transaction/StandardJanusGraphTx.java#L924
-                 // scalastyle:on
-                 val k = l.properties("key")
-                 val v = l.properties("typ")
-                 for {
-                   property <- ZIO.effect(mgmt.makePropertyKey(k).dataType(Utils.getClassTagFromString(v)).cardinality(Cardinality.single).make)
-                   editedLabel <- ZIO.effect(mgmt.addProperties(label, property))
-                 } yield editedLabel
-               } else ZIO.succeed(label)
-             } yield labelWithProperty)
+              for {
+                label <- ZIO.effect(graph.makeEdgeLabel(l.name).multiplicity(MULTI).make)
+                labelWithProperty <- if (!l.properties.isEmpty) {
+                  // An edgelabel cardinality can only be SINGLE
+                  val k = l.properties("key")
+                  val v = l.properties("typ")
+                  for {
+                    // scalastyle:off
+                    // https://github.com/JanusGraph/janusgraph/blob/master/janusgraph-core/src/main/java/org/janusgraph/graphdb/transaction/StandardJanusGraphTx.java#L924
+                    // scalastyle:on
+                    property <- ZIO.effect(graph.makePropertyKey(k).dataType(Utils.getClassTagFromString(v)).cardinality(Cardinality.single).make)
+                    editedLabel <- ZIO.effect(graph.addProperties(label, property))
+                  } yield editedLabel
+                } else ZIO.succeed(label)
+              } yield labelWithProperty)
             )
-            _ <- ZIO.effect(mgmt.commit).tapBoth(
+            _ <- ZIO.effect(graph.tx.commit).tapBoth(
               e => log.info(s"Something went wrong while creating schema $e"), s => log.info(s"Successfully created Table schema")
             )
+          } yield ()
+        }
+
+        // We can assume a flat schema here since we already flatten the schema while reading the data
+        override def loadSchema(graph: JanusGraph, dataSchema: StructType): ZIO[Logging, Throwable, Unit] = {
+
+          val managedMgmt =
+            ZIO.effect(graph.openManagement()).toManaged(mgmt => ZIO.effect(mgmt.commit()).catchAll(f => log.error(s"Error committing mgmt $f")))
+
+          for {
+            vertexLabels <- managedMgmt.use(mgmt => ZIO.effect(mgmt.getVertexLabels.asScala.toList.map(_.name)))
+            _ <- if (vertexLabels.size == 0) {
+              // We do not have schema
+              for {
+               _ <- log.info(s"Starting to load schema")
+               _ <- load(graph, dataSchema)
+              } yield ()
+            } else {
+              log.info(s"""Found vertexLabels (${vertexLabels.mkString(",")}) in the target table, skipping schema loading""")
+            }
           } yield ()
         }
       }
