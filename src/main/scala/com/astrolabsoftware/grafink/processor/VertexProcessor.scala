@@ -20,14 +20,14 @@ import org.apache.spark.sql.{ DataFrame, Row, SparkSession }
 import org.apache.spark.sql.types.DataType
 import org.apache.tinkerpop.gremlin.structure.T
 import org.janusgraph.graphdb.database.StandardJanusGraph
-import zio.{Has, URLayer, ZIO, ZLayer}
+import zio.{ Has, URLayer, ZIO, ZLayer }
 import zio.blocking.Blocking
 import zio.logging.Logging
 
 import com.astrolabsoftware.grafink.JanusGraphEnv
 import com.astrolabsoftware.grafink.JanusGraphEnv.JanusGraphEnv
-import com.astrolabsoftware.grafink.Job.{JobTime, SparkEnv}
-import com.astrolabsoftware.grafink.common.{PartitionManager, Utils}
+import com.astrolabsoftware.grafink.Job.{ JobTime, SparkEnv }
+import com.astrolabsoftware.grafink.common.{ PartitionManager, Utils }
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
 import com.astrolabsoftware.grafink.models.config.Config
 
@@ -101,7 +101,13 @@ final class VertexProcessorLive(spark: SparkSession, config: JanusGraphConfig) e
             for {
               _ <- ZIO.collectAll_(
                 // TODO: Make id fieldName configurable
-                group.map(r => ZIO.effect(graph.addVertex(getVertexParams(r, java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long]("id")))): _*)))
+                group.map(r =>
+                  ZIO.effect(
+                    graph.addVertex(
+                      getVertexParams(r, java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long]("id")))): _*
+                    )
+                  )
+                )
               )
               _ <- ZIO.effect(graph.tx.commit)
             } yield ()

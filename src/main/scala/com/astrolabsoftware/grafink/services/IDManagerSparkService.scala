@@ -16,12 +16,12 @@
  */
 package com.astrolabsoftware.grafink.services
 
-import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkExtensions, SparkSession}
-import org.apache.spark.sql.types.{LongType, StructField, StructType}
+import org.apache.spark.sql.{ DataFrame, Row, SaveMode, SparkExtensions, SparkSession }
+import org.apache.spark.sql.types.{ LongType, StructField, StructType }
 import zio._
-import zio.logging.{log, Logging}
+import zio.logging.{ log, Logging }
 
-import com.astrolabsoftware.grafink.Job.{JobTime, SparkEnv, VertexData}
+import com.astrolabsoftware.grafink.Job.{ JobTime, SparkEnv, VertexData }
 import com.astrolabsoftware.grafink.common.PartitionManager
 import com.astrolabsoftware.grafink.models.GrafinkException.GetIdException
 import com.astrolabsoftware.grafink.models.IDManagerConfig
@@ -30,10 +30,11 @@ import com.astrolabsoftware.grafink.services.IDManager.IDType
 
 object IDManagerSparkService {
 
-  type IDType           = Long
+  type IDType                = Long
   type IDManagerSparkService = Has[IDManagerSparkService.Service]
 
   trait Service {
+
     /**
      * Reads all the intermediate data which is already ingested in janusgraph so far
      * This means all rows have an "id" column which was generated when this data was
@@ -67,7 +68,8 @@ object IDManagerSparkService {
     RIO.accessM(_.get.process(df))
 }
 
-final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConfig) extends IDManagerSparkService.Service {
+final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConfig)
+    extends IDManagerSparkService.Service {
 
   def addId(df: DataFrame, lastMax: IDType): DataFrame =
     SparkExtensions.zipWithIndex(df, lastMax + 1)
@@ -78,7 +80,10 @@ final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConf
       case e: org.apache.spark.sql.AnalysisException if e.message.contains("Unable to infer schema for Parquet") =>
         for {
           _ <- log.warn(s"No data found at ${config.spark.dataPath}, returning empty dataframe")
-        } yield spark.createDataFrame(spark.sparkContext.emptyRDD[Row], StructType(StructField("id", LongType, false) +: schema.fields))
+        } yield spark.createDataFrame(
+          spark.sparkContext.emptyRDD[Row],
+          StructType(StructField("id", LongType, false) +: schema.fields)
+        )
     }
 
   override def process(df: DataFrame): ZIO[Logging, Throwable, VertexData] =
@@ -86,7 +91,7 @@ final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConf
       // All the idmanager data so far ingested
       idManagerDf <- readAll(df.schema)
       // Get the last max id used
-      lastMax   <- fetchID(idManagerDf)
+      lastMax <- fetchID(idManagerDf)
       // Generate new ids for the `jobTime` data
       dfWithId <- processData(lastMax, df)
     } yield VertexData(loaded = idManagerDf, current = dfWithId)
@@ -118,11 +123,11 @@ final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConf
     // TODO: Modify this to read data from only the latest day's data present in the path
     import org.apache.spark.sql.functions.{ col, max }
 
-      for {
-        res <- ZIO.effect(df.select(max(col("id"))).collect)
-        currentID = res.headOption.map(r => if (r.isNullAt(0)) 0L else r.getLong(0) )
-        _ <- if (currentID.isDefined) log.info(s"Returning current max id = ${currentID.get}")
-        else ZIO.fail(GetIdException(s"Did not get valid max id"))
-      } yield currentID.get
+    for {
+      res <- ZIO.effect(df.select(max(col("id"))).collect)
+      currentID = res.headOption.map(r => if (r.isNullAt(0)) 0L else r.getLong(0))
+      _ <- if (currentID.isDefined) log.info(s"Returning current max id = ${currentID.get}")
+      else ZIO.fail(GetIdException(s"Did not get valid max id"))
+    } yield currentID.get
   }
 }

@@ -49,14 +49,14 @@ object Utils {
 
   val getClassTagFromString: String => Class[_] = d =>
     d match {
-      case "binary"  => classOf[String]
-      case "byte"    => classOf[java.lang.Byte]
-      case "int"     => classOf[Integer]
-      case "long"    => classOf[java.lang.Long]
-      case "float"   => classOf[java.lang.Float]
-      case "double"  => classOf[java.lang.Double]
-      case "string"  => classOf[String]
-      case "bool" => classOf[java.lang.Boolean]
-      case _           => classOf[String]
+      case "binary" => classOf[String]
+      case "byte"   => classOf[java.lang.Byte]
+      case "int"    => classOf[Integer]
+      case "long"   => classOf[java.lang.Long]
+      case "float"  => classOf[java.lang.Float]
+      case "double" => classOf[java.lang.Double]
+      case "string" => classOf[String]
+      case "bool"   => classOf[java.lang.Boolean]
+      case _        => classOf[String]
     }
 }

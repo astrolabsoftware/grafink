@@ -7,40 +7,45 @@ import zio.test._
 import zio.test.Assertion._
 import zio.test.environment.TestConsole
 
-import com.astrolabsoftware.grafink.Job.{JobTime, SparkEnv}
+import com.astrolabsoftware.grafink.Job.{ JobTime, SparkEnv }
 import com.astrolabsoftware.grafink.common.PartitionManager
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
-import com.astrolabsoftware.grafink.models.{ HBaseColumnConfig, IDManagerConfig, Parquet, ReaderConfig, SparkPathConfig }
-import com.astrolabsoftware.grafink.processor.VertexProcessorSpec.{getClass, sparkLayer}
+import com.astrolabsoftware.grafink.models.{
+  HBaseColumnConfig,
+  IDManagerConfig,
+  Parquet,
+  ReaderConfig,
+  SparkPathConfig
+}
+import com.astrolabsoftware.grafink.processor.VertexProcessorSpec.{ getClass, sparkLayer }
 import com.astrolabsoftware.grafink.services.reader.Reader
-import com.astrolabsoftware.grafink.utils.{SparkTestEnv, TempDirService}
+import com.astrolabsoftware.grafink.utils.{ SparkTestEnv, TempDirService }
 
 object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
 
   def spec: ZSpec[Environment, Failure] = suite("IDManagerSparkServiceSpec")(
     testM("IDManagerSparkService will correctly return 0 if no data exists") {
-      val dateString    = "2019-02-03"
-      val date          = LocalDate.parse(dateString, dateFormat)
-      val dataPath      = "/iddata"
-      val currentDataPath   = "/data"
-      val path          = getClass.getResource(dataPath).getPath
-      val logger        = Logger.test
-      val jobTime       = JobTime(date, 1)
-      val app           = for {
+      val dateString      = "2019-02-03"
+      val date            = LocalDate.parse(dateString, dateFormat)
+      val dataPath        = "/iddata"
+      val currentDataPath = "/data"
+      val path            = getClass.getResource(dataPath).getPath
+      val logger          = Logger.test
+      val jobTime         = JobTime(date, 1)
+      val app = for {
         spark <- ZIO.access[SparkEnv](_.get.sparkEnv)
-        df <- ZIO.effect(spark.read.parquet(getClass.getResource(currentDataPath).getPath))
+        df    <- ZIO.effect(spark.read.parquet(getClass.getResource(currentDataPath).getPath))
         // All the idmanager data so far ingested
         idManagerDf <- IDManagerSparkService.readAll(df.schema)
         // Get the last max id used
-        lastMax   <- IDManagerSparkService.fetchID(idManagerDf)
+        lastMax <- IDManagerSparkService.fetchID(idManagerDf)
       } yield lastMax
 
-        val idConfigLayer = ZLayer.succeed(IDManagerConfig(SparkPathConfig(path), HBaseColumnConfig("", "", "")))
+      val idConfigLayer = ZLayer.succeed(IDManagerConfig(SparkPathConfig(path), HBaseColumnConfig("", "", "")))
 
-        val sparkLayer            = SparkTestEnv.test
-        val idManagerSparkServiceLayer = (logger ++ sparkLayer ++ idConfigLayer) >>> IDManagerSparkService.live
-
+      val sparkLayer                 = SparkTestEnv.test
+      val idManagerSparkServiceLayer = (logger ++ sparkLayer ++ idConfigLayer) >>> IDManagerSparkService.live
 
       assertM(app.provideLayer(Logger.live ++ sparkLayer ++ idManagerSparkServiceLayer))(equalTo(0L))
     },
@@ -62,10 +67,10 @@ object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
         ZLayer.succeed(IDManagerConfig(SparkPathConfig(tempDir.getAbsolutePath), HBaseColumnConfig("", "", "")))
 
       val app = for {
-        df       <- Reader.read(PartitionManager(date, 1))
+        df         <- Reader.read(PartitionManager(date, 1))
         vertexData <- IDManagerSparkService.process(df)
-        idData   <- ZIO.effect(vertexData.current.select("id").collect)
-        _        <- TempDirService.removeTempDir(tempDir)
+        idData     <- ZIO.effect(vertexData.current.select("id").collect)
+        _          <- TempDirService.removeTempDir(tempDir)
         ids = idData.map(_.getLong(0))
       } yield ids.toIterable
 

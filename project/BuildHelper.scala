@@ -22,6 +22,7 @@ object BuildHelper {
 
   val zioVersion = "1.0.0-RC20"
   val pureConfigVersion = "0.12.3"
+  val fastParseVersion = "2.1.0"
   val zioLoggingVersion = "0.3.0"
   val sparkVersion = "2.4.4"
   val scoptVersion = "3.7.1"
@@ -63,6 +64,7 @@ object BuildHelper {
       Seq(
         "com.github.scopt" %% "scopt" % scoptVersion,
         "com.github.pureconfig" %% "pureconfig" % pureConfigVersion,
+        "com.lihaoyi" %% "fastparse" % fastParseVersion,
         "dev.zio" %% "zio" % zioVersion,
         "dev.zio" %% "zio-logging-slf4j" % zioLoggingVersion,
         "org.apache.hbase" % "hbase-client" % hbaseVersion excludeAll(

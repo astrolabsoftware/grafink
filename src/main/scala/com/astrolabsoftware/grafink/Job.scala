@@ -18,15 +18,16 @@ package com.astrolabsoftware.grafink
 
 import java.time.LocalDate
 
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{ DataFrame, SparkSession }
 import zio._
 import zio.logging.Logging
 
 import com.astrolabsoftware.grafink.common.PartitionManager
 import com.astrolabsoftware.grafink.models.config._
-import com.astrolabsoftware.grafink.processor.{EdgeProcessor, SimilarityClassifer, VertexProcessor}
+import com.astrolabsoftware.grafink.processor.{ EdgeProcessor, VertexProcessor }
 import com.astrolabsoftware.grafink.processor.EdgeProcessor.EdgeProcessorService
 import com.astrolabsoftware.grafink.processor.VertexProcessor.VertexProcessorService
+import com.astrolabsoftware.grafink.processor.edgerules.SimilarityClassifer
 import com.astrolabsoftware.grafink.schema.SchemaLoader
 import com.astrolabsoftware.grafink.schema.SchemaLoader.SchemaLoaderService
 import com.astrolabsoftware.grafink.services.IDManagerSparkService.IDManagerSparkService
@@ -68,12 +69,15 @@ object Job {
             } yield ()
           )
         // Generate Ids for the data
-        idManager <- ZIO.access[IDManagerSparkService](_.get)
+        idManager  <- ZIO.access[IDManagerSparkService](_.get)
         vertexData <- idManager.process(df)
         // Process vertices
         _ <- VertexProcessor.process(jobTime, vertexData.current)
         // Process Edges
-        _ <- EdgeProcessor.process(vertexData, List(new SimilarityClassifer(janusGraphConfig.edgeLoader.rules.similarityClassifer)))
+        _ <- EdgeProcessor.process(
+          vertexData,
+          List(new SimilarityClassifer(janusGraphConfig.edgeLoader.rules.similarityClassifer))
+        )
       } yield ()
 
   /**

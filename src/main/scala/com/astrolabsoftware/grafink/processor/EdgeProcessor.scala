@@ -16,24 +16,25 @@
  */
 package com.astrolabsoftware.grafink.processor
 
-import org.apache.spark.sql.{Dataset, SparkSession}
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.{GraphTraversal, GraphTraversalSource}
+import org.apache.spark.sql.{ Dataset, SparkSession }
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.{ GraphTraversal, GraphTraversalSource }
 import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.janusgraph.graphdb.database.StandardJanusGraph
 import zio._
 import zio.blocking.Blocking
-import zio.logging.{log, Logging}
+import zio.logging.{ log, Logging }
 
 import com.astrolabsoftware.grafink.JanusGraphEnv
 import com.astrolabsoftware.grafink.JanusGraphEnv.JanusGraphEnv
-import com.astrolabsoftware.grafink.Job.{SparkEnv, VertexData}
+import com.astrolabsoftware.grafink.Job.{ SparkEnv, VertexData }
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
 import com.astrolabsoftware.grafink.models.config.Config
 import com.astrolabsoftware.grafink.processor.EdgeProcessor.MakeEdge
+import com.astrolabsoftware.grafink.processor.edgerules.VertexClassifierRule
 
 object EdgeProcessor {
 
-  // TODO Support edge properties
+  // TODO Support proper data type for edge properties, and support multiple properties
   case class MakeEdge(src: Long, dst: Long, label: String)
 
   type EdgeProcessorService = Has[EdgeProcessor.Service]
@@ -51,7 +52,10 @@ object EdgeProcessor {
       } yield new EdgeProcessorLive(spark, janusGraphConfig)
     )
 
-  def process(vertexData: VertexData, rules: List[VertexClassifierRule]): ZIO[EdgeProcessorService with Logging, Throwable, Unit] =
+  def process(
+    vertexData: VertexData,
+    rules: List[VertexClassifierRule]
+  ): ZIO[EdgeProcessorService with Logging, Throwable, Unit] =
     ZIO.accessM(_.get.process(vertexData, rules))
 }
 
@@ -60,17 +64,17 @@ final class EdgeProcessorLive(spark: SparkSession, config: JanusGraphConfig) ext
   override def process(vertexData: VertexData, rules: List[VertexClassifierRule]): ZIO[Logging, Throwable, Unit] =
     for {
       _ <- ZIO.collectAll(rules.map { rule =>
-          for {
+        for {
           _ <- log.info(s"Adding edges using rule ${rule.name}")
           _ <- loadEdges(rule.classify(vertexData.loaded, vertexData.current))
-          } yield ()
-        })
-    } yield()
+        } yield ()
+      })
+    } yield ()
 
   override def loadEdges(edgesRDD: Dataset[MakeEdge]): ZIO[Logging, Throwable, Unit] = {
 
-    val batchSize        = config.edgeLoader.batchSize
-    val c = config
+    val batchSize = config.edgeLoader.batchSize
+    val c         = config
 
     // Vertex cache
     val vCache = ZRef.make(Map.empty[Long, GraphTraversal[Vertex, Vertex]])
@@ -80,41 +84,45 @@ final class EdgeProcessorLive(spark: SparkSession, config: JanusGraphConfig) ext
 
       val janusGraphLayer = (Blocking.live ++ ZLayer.succeed(c)) >>> JanusGraphEnv.hbase()
 
+      // TODO: Remove as not used and not possible to cache here
       @inline
       def getFromCacheOrGraph(g: GraphTraversalSource, id: Long): ZIO[Any, Throwable, GraphTraversal[Vertex, Vertex]] =
         for {
           cacheRef <- vCache
-          cache <- cacheRef.get
-          vertex <- ZIO.fromOption(cache.get(id)).orElse(
-            for {
-              v <- ZIO.effect(g.V(java.lang.Long.valueOf(id)))
-              _ <- cacheRef.update(_.updated(id, v))
-            } yield v
-          )
+          cache    <- cacheRef.get
+          vertex <- ZIO
+            .fromOption(cache.get(id))
+            .orElse(
+              for {
+                v <- ZIO.effect(g.V(java.lang.Long.valueOf(id)))
+                _ <- cacheRef.update(_.updated(id, v))
+              } yield v
+            )
         } yield vertex
 
       val job =
         for {
           graph <- ZIO.access[JanusGraphEnv](_.get.graph)
-          g = graph.traversal()
+          g         = graph.traversal()
           idManager = graph.asInstanceOf[StandardJanusGraph].getIDManager
           kgroup    = partition.grouped(batchSize)
           l = kgroup.map(group =>
             for {
               _ <- ZIO.collectAll_(
-                group.map { r =>
-                // TODO: Optimize
-                  for {
-                    // Safe to get here since we know its already loaded
-                    srcVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.src))))
-                    dstVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.dst))))
-                    // TODO: Derive the labels from schema config by extending MakeEdge class
-                    _ <- ZIO.effect(srcVertex.addE( "similarity").to(dstVertex).property("value", r.label).iterate)
-                    // Add reverse edge as well
-                    srcVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.src))))
-                    dstVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.dst))))
-                    _ <- ZIO.effect(dstVertex.addE("similarity").to(srcVertex).property("value", r.label).iterate)
-                  } yield ()
+                group.map {
+                  r =>
+                    // TODO: Optimize
+                    for {
+                      // Safe to get here since we know its already loaded
+                      srcVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.src))))
+                      dstVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.dst))))
+                      // TODO: Derive the labels from schema config by extending MakeEdge class
+                      _ <- ZIO.effect(srcVertex.addE("similarity").to(dstVertex).property("value", r.label).iterate)
+                      // Add reverse edge as well
+                      srcVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.src))))
+                      dstVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.dst))))
+                      _         <- ZIO.effect(dstVertex.addE("similarity").to(srcVertex).property("value", r.label).iterate)
+                    } yield ()
                 }
               )
               _ <- ZIO.effect(g.tx.commit)

@@ -2,13 +2,22 @@ package com.astrolabsoftware.grafink.schema
 
 import scala.collection.JavaConverters._
 
-import org.apache.spark.sql.types.{DoubleType, FloatType, IntegerType, StringType, StructField, StructType}
-import zio.{ZIO, ZLayer}
-import zio.test.{DefaultRunnableSpec, _}
+import org.apache.spark.sql.types.{ DoubleType, FloatType, IntegerType, StringType, StructField, StructType }
+import zio.{ ZIO, ZLayer }
+import zio.test.{ DefaultRunnableSpec, _ }
 import zio.test.Assertion._
 
 import com.astrolabsoftware.grafink.logging.Logger
-import com.astrolabsoftware.grafink.models.{EdgeLabelConfig, EdgeLoaderConfig, EdgeRulesConfig, JanusGraphConfig, JanusGraphStorageConfig, SchemaConfig, SimilarityConfig, VertexLoaderConfig}
+import com.astrolabsoftware.grafink.models.{
+  EdgeLabelConfig,
+  EdgeLoaderConfig,
+  EdgeRulesConfig,
+  JanusGraphConfig,
+  JanusGraphStorageConfig,
+  SchemaConfig,
+  SimilarityConfig,
+  VertexLoaderConfig
+}
 import com.astrolabsoftware.grafink.utils.JanusGraphTestEnv
 
 object SchemaLoaderSpec extends DefaultRunnableSpec {
@@ -30,9 +39,10 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
           SchemaConfig(
             vertexPropertyCols = List("rfscore", "snn"),
             vertexLabel = "type",
-            edgeLabels = List(EdgeLabelConfig("similarity", Map("key"->"value", "typ" -> "long")))),
+            edgeLabels = List(EdgeLabelConfig("similarity", Map("key" -> "value", "typ" -> "long")))
+          ),
           VertexLoaderConfig(10),
-          EdgeLoaderConfig(100, EdgeRulesConfig(SimilarityConfig(List("rfscore"), 10))),
+          EdgeLoaderConfig(100, EdgeRulesConfig(SimilarityConfig("rfscore", 10))),
           JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph")
         )
 
