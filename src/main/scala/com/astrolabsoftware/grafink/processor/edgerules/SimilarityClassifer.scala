@@ -26,18 +26,6 @@ class SimilarityClassifer(config: SimilarityConfig) extends VertexClassifierRule
 
   override def name: String = "similarityClassifier"
 
-  /* def parseToJoinCondition(exp: String, cols: List[String]): (Column, List[String]) = {
-    SimilarityExpParser.parseExpression(exp) match {
-      case head :: Nil => (col(head), head :: cols)
-      case head :: tail =>
-        val one = parseToJoinCondition(head.substring(1, head.length - 1), cols)
-        val two = parseToJoinCondition(tail, cols)
-
-    }
-  } */
-
-  // def getColumnNamesFromExpr(expr: String, cols: List[String])
-
   /**
    * Given a loaded data df (existing data in janusgraph), and current data df, return
    * an RDD[{@link MakeEdge}]
@@ -47,15 +35,15 @@ class SimilarityClassifer(config: SimilarityConfig) extends VertexClassifierRule
    */
   override def classify(loadedDf: DataFrame, df: DataFrame): Dataset[MakeEdge] = {
 
-    val similarityExpression = config.similarityExp // """(rfscore AND snnscore) OR classtar"""
+    val similarityExpression = config.similarityExp
     val parsed               = SimilarityExpParser.parse(similarityExpression)
-    // TODO: Make this handling of mulens better
-    val joinColumns =
-      parsed.columns.flatMap(f => if (f == "mulens") List("mulens_class_1", "mulens_class_2") else List(f))
+    val joinColumns = parsed.columns
     val joinCondition = parsed.condition
-    // joinColumns.map(c => col(s"${c}1") <=> col(s"${c}2")).reduce(_ || _)
 
-    def selectCols(num: Int): List[Column] = col("id") :: joinColumns.map(x => col(x).as(s"${x}$num"))
+    // TODO: Make this handling of mulens better
+    @inline
+    def selectCols(num: Int): List[Column] =
+      col("id") :: joinColumns.flatMap(f => if (f == "mulens") List("mulens_class_1", "mulens_class_2") else List(f)).map(x => col(x).as(s"${x}$num"))
 
     val df1New = df.select(selectCols(1): _*)
     val df2Old = loadedDf.select(selectCols(2): _*)

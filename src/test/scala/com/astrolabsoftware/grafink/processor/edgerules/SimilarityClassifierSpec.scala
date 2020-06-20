@@ -21,6 +21,8 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
     _objectId: String,
     _rfscore: Double,
     _snnscore: Double,
+    _roid: Double,
+    _classtar: Double,
     _cdsxmatch: Cdsxmatch,
     _mulens_class_1: Mulens,
     _mulens_class_2: Mulens
@@ -32,6 +34,8 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
       cdsxmatch = _cdsxmatch.name,
       rfscore = _rfscore,
       snnscore = _snnscore,
+      roid = _roid,
+      classtar = _classtar,
       mulens_class_1 = mulensToString(_mulens_class_1),
       mulens_class_2 = mulensToString(_mulens_class_2),
       year = 2019,
@@ -55,6 +59,8 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _objectId = "ZTF19acmbyav",
               _rfscore = 0.388,
               _snnscore = 0.36001157760620117,
+              _classtar = 0.0,
+              _roid = 0.0,
               _cdsxmatch = Cdsxmatch_UNKNOWN,
               _mulens_class_1 = MULENS_NULL,
               _mulens_class_2 = MULENS_NULL
@@ -68,6 +74,8 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _objectId = "ZTF19acmbyav",
               _rfscore = 0.988,
               _snnscore = 0.67001157760620889,
+              _classtar = 0.0,
+              _roid = 0.0,
               _cdsxmatch = Cdsxmatch_UNKNOWN,
               _mulens_class_1 = MULENS_NULL,
               _mulens_class_2 = MULENS_NULL
@@ -85,6 +93,55 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
         }
 
         assertM(app.provideLayer(sparkLayer))(hasSameElementsDistinct(List(MakeEdge(2L, 1L, "1"))))
+      },
+      testM("Similarity classifier will correctly calculate similarity") {
+
+        val similarityConfig =
+          SimilarityConfig(similarityExp = "(rfscore AND snnscore) OR mulens OR classtar OR cdsxmatch OR objectId OR roid", parallelism = 2)
+
+        val similarityClassifer = new SimilarityClassifer(similarityConfig)
+
+        val loadedData =
+          List(
+            genAlert(
+              _id = 1L,
+              _objectId = "toto",
+              _rfscore = 0.99,
+              _snnscore = 0.8,
+              _classtar = 0.0,
+              _roid = 0.0,
+              _cdsxmatch = Cdsxmatch_UNKNOWN,
+              _mulens_class_1 = CONSTANT,
+              _mulens_class_2 = CONSTANT
+            )
+          )
+
+        val currentData =
+          List(
+            genAlert(
+              _id = 2L,
+              _objectId = "toto",
+              _rfscore = 0.95,
+              _snnscore = 0.95,
+              _classtar = 0.0,
+              _roid = 0.0,
+              _cdsxmatch = Cdsxmatch_UNKNOWN,
+              _mulens_class_1 = ML,
+              _mulens_class_2 = CONSTANT
+            )
+          )
+
+        val app = for {
+          spark <- SparkTestEnv.sparkEnv
+
+        } yield {
+          import spark.implicits._
+          val loadedDf  = loadedData.toDF
+          val currentDf = currentData.toDF
+          similarityClassifer.classify(loadedDf, currentDf).collect.toList
+        }
+
+        assertM(app.provideLayer(sparkLayer))(hasSameElementsDistinct(List(MakeEdge(2L, 1L, "5"))))
       }
     )
 }

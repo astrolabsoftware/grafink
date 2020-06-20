@@ -34,8 +34,8 @@ object SimilarityExpParserSpec extends DefaultRunnableSpec {
             ParseResult(
               (mulensmludf(
                 col("mulens_class_11"),
-                col("mulens_class_12"),
                 col("mulens_class_21"),
+                col("mulens_class_12"),
                 col("mulens_class_22")
               ) === lit(true)) ||
                 (classtarudf(col("classtar1"), col("classtar2")) === lit(true)) ||
@@ -57,8 +57,8 @@ object SimilarityExpParserSpec extends DefaultRunnableSpec {
                 (scoreudf(col("snnscore1"), col("snnscore2")) === lit(true)) ||
                 ((mulensmludf(
                   col("mulens_class_11"),
-                  col("mulens_class_12"),
                   col("mulens_class_21"),
+                  col("mulens_class_12"),
                   col("mulens_class_22")
                 ) === lit(true)) ||
                   (classtarudf(col("classtar1"), col("classtar2")) === lit(true)) ||

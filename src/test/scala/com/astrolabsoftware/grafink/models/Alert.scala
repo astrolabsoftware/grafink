@@ -26,6 +26,8 @@ case class Alert(
   cdsxmatch: String,
   rfscore: Double,
   snnscore: Double,
+  classtar: Double,
+  roid: Double,
   mulens_class_1: Option[String] = None,
   mulens_class_2: Option[String] = None,
   year: Int,
