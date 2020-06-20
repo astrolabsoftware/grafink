@@ -61,8 +61,9 @@ final class IDManagerHBaseService(
     val key = makeIdKey(s"${jobTime.day.format(PartitionManager.dateFormat)}", janusConfig.storage.tableName)
     for {
       res <- client.getFromTable(key, idConfig.hbase.cf, idConfig.hbase.qualifier, idConfig.hbase.tableName)
-      _ = if (res.isEmpty)
+      _ = if (res.isEmpty) {
         ZIO.fail(GetIdException(s"Error getting validId from hbase table ${idConfig.hbase.tableName}"))
+      }
       id = res.get.toLong
     } yield id
   }
