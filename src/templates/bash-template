@@ -72,7 +72,7 @@ LOG_FILE=$lib_dir/run.out
 
 echo "Running spark-submit..."
 
-DEPLOY_MODE=cluster
+DEPLOY_MODE="client"
 if [ -z ${SPARK_MASTER} ]; then
   echo "Running spark locally since SPARK_MASTER not defined"
   SPARK_MASTER="local[*]"
@@ -80,7 +80,9 @@ if [ -z ${SPARK_MASTER} ]; then
   CONF_FILE=$CONF_FILE_PATH
 fi
 
-VARS=${VARS/$CONF_FILE_PATH/$CONF_FILE}
+if [ "$DEPLOY_MODE" = "cluster" ]; then
+  VARS=${VARS/$CONF_FILE_PATH/$CONF_FILE}
+fi
 
 spark-submit \
 --master ${SPARK_MASTER} \

@@ -24,6 +24,7 @@ lazy val root =
     )
 
 assemblyJarName in assembly := s"${name.value}-${version.value}.jar"
+mainClass in assembly := Some("com.astrolabsoftware.grafink.Boot")
 
 // https://github.com/circe/circe/issues/713
 // https://stackoverflow.com/questions/43611147/spark-not-working-with-pureconfig
