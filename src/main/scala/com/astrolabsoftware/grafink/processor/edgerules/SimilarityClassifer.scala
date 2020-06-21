@@ -26,6 +26,8 @@ class SimilarityClassifer(config: SimilarityConfig) extends VertexClassifierRule
 
   override def name: String = "similarityClassifier"
 
+  override def getEdgeLabel: String = "similarity"
+
   /**
    * Given a loaded data df (existing data in janusgraph), and current data df, return
    * an RDD[{@link MakeEdge}]
@@ -64,7 +66,7 @@ class SimilarityClassifer(config: SimilarityConfig) extends VertexClassifierRule
 
     @inline
     def makeEdge(df: DataFrame): Dataset[MakeEdge] =
-      df.select(col(s"_1.id").as("src"), col("_2.id").as("dst"), col("similarity").cast("string").as("label"))
+      df.select(col(s"_1.id").as("src"), col("_2.id").as("dst"), col("similarity").as("propVal"))
         .as(encoder)
 
     val computeSimOld      = computeSimilarity(joinedOld)

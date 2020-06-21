@@ -35,13 +35,13 @@ import com.astrolabsoftware.grafink.processor.edgerules.VertexClassifierRule
 object EdgeProcessor {
 
   // TODO Support proper data type for edge properties, and support multiple properties
-  case class MakeEdge(src: Long, dst: Long, label: String)
+  case class MakeEdge(src: Long, dst: Long, propVal: Long)
 
   type EdgeProcessorService = Has[EdgeProcessor.Service]
 
   trait Service {
     def process(vertexData: VertexData, rules: List[VertexClassifierRule]): ZIO[Logging, Throwable, Unit]
-    def loadEdges(edgesRDD: Dataset[MakeEdge]): ZIO[Logging, Throwable, Unit]
+    def loadEdges(edgesRDD: Dataset[MakeEdge], label: String): ZIO[Logging, Throwable, Unit]
   }
 
   val live: URLayer[SparkEnv with Has[JanusGraphConfig] with Logging, EdgeProcessorService] =
@@ -66,12 +66,12 @@ final class EdgeProcessorLive(spark: SparkSession, config: JanusGraphConfig) ext
       _ <- ZIO.collectAll(rules.map { rule =>
         for {
           _ <- log.info(s"Adding edges using rule ${rule.name}")
-          _ <- loadEdges(rule.classify(vertexData.loaded, vertexData.current))
+          _ <- loadEdges(rule.classify(vertexData.loaded, vertexData.current), rule.getEdgeLabel)
         } yield ()
       })
     } yield ()
 
-  override def loadEdges(edgesRDD: Dataset[MakeEdge]): ZIO[Logging, Throwable, Unit] = {
+  override def loadEdges(edgesRDD: Dataset[MakeEdge], label: String): ZIO[Logging, Throwable, Unit] = {
 
     val batchSize = config.edgeLoader.batchSize
     val c         = config
@@ -116,12 +116,11 @@ final class EdgeProcessorLive(spark: SparkSession, config: JanusGraphConfig) ext
                       // Safe to get here since we know its already loaded
                       srcVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.src))))
                       dstVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.dst))))
-                      // TODO: Derive the labels from schema config by extending MakeEdge class
-                      _ <- ZIO.effect(srcVertex.addE("similarity").to(dstVertex).property("value", r.label).iterate)
+                      _ <- ZIO.effect(srcVertex.addE(label).to(dstVertex).property("value", r.propVal).iterate)
                       // Add reverse edge as well
                       srcVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.src))))
                       dstVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.dst))))
-                      _         <- ZIO.effect(dstVertex.addE("similarity").to(srcVertex).property("value", r.label).iterate)
+                      _         <- ZIO.effect(dstVertex.addE(label).to(srcVertex).property("value", r.propVal).iterate)
                     } yield ()
                 }
               )

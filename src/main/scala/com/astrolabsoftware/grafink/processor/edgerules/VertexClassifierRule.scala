@@ -32,4 +32,6 @@ trait VertexClassifierRule {
    * @return DataFrame
    */
   def classify(loadedDf: DataFrame, df: DataFrame): Dataset[MakeEdge]
+
+  def getEdgeLabel: String
 }

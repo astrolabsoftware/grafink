@@ -92,7 +92,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
           similarityClassifer.classify(loadedDf, currentDf).collect.toList
         }
 
-        assertM(app.provideLayer(sparkLayer))(hasSameElementsDistinct(List(MakeEdge(2L, 1L, "1"))))
+        assertM(app.provideLayer(sparkLayer))(hasSameElementsDistinct(List(MakeEdge(2L, 1L, 1))))
       },
       testM("Similarity classifier will correctly calculate similarity") {
 
@@ -141,7 +141,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
           similarityClassifer.classify(loadedDf, currentDf).collect.toList
         }
 
-        assertM(app.provideLayer(sparkLayer))(hasSameElementsDistinct(List(MakeEdge(2L, 1L, "5"))))
+        assertM(app.provideLayer(sparkLayer))(hasSameElementsDistinct(List(MakeEdge(2L, 1L, 5))))
       }
     )
 }
