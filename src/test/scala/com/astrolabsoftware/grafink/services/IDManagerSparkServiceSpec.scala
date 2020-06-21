@@ -37,7 +37,7 @@ object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
         spark <- ZIO.access[SparkEnv](_.get.sparkEnv)
         df    <- ZIO.effect(spark.read.parquet(getClass.getResource(currentDataPath).getPath))
         // All the idmanager data so far ingested
-        idManagerDf <- IDManagerSparkService.readAll(df.schema)
+        idManagerDf <- IDManagerSparkService.readAll(df.schema, "test")
         // Get the last max id used
         lastMax <- IDManagerSparkService.fetchID(idManagerDf)
       } yield lastMax
@@ -68,7 +68,7 @@ object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
 
       val app = for {
         df         <- Reader.read(PartitionManager(date, 1))
-        vertexData <- IDManagerSparkService.process(df)
+        vertexData <- IDManagerSparkService.process(df, "test")
         idData     <- ZIO.effect(vertexData.current.select("id").collect)
         _          <- TempDirService.removeTempDir(tempDir)
         ids = idData.map(_.getLong(0))

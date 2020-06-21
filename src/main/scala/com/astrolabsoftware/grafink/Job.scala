@@ -70,7 +70,7 @@ object Job {
           )
         // Generate Ids for the data
         idManager  <- ZIO.access[IDManagerSparkService](_.get)
-        vertexData <- idManager.process(df)
+        vertexData <- idManager.process(df, janusGraphConfig.storage.tableName)
         // Process vertices
         _ <- VertexProcessor.process(jobTime, vertexData.current)
         // Process Edges

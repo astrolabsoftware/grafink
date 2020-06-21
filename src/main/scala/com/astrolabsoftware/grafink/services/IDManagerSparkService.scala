@@ -41,9 +41,9 @@ object IDManagerSparkService {
      * processed
      * @return
      */
-    def readAll(schema: StructType): ZIO[Logging, Throwable, DataFrame]
-    def process(df: DataFrame): ZIO[Logging, Throwable, VertexData]
-    def processData(id: IDType, df: DataFrame): ZIO[Logging, Throwable, DataFrame]
+    def readAll(schema: StructType, tableName: String): ZIO[Logging, Throwable, DataFrame]
+    def process(df: DataFrame, tableName: String): ZIO[Logging, Throwable, VertexData]
+    def processData(id: IDType, df: DataFrame, tableName: String): ZIO[Logging, Throwable, DataFrame]
     def fetchID(df: DataFrame): RIO[Logging, IDType]
   }
 
@@ -55,17 +55,17 @@ object IDManagerSparkService {
       } yield new IDManagerSparkServiceLive(spark, config)
     )
 
-  def readAll(schema: StructType): RIO[IDManagerSparkService with Logging, DataFrame] =
-    RIO.accessM(_.get.readAll(schema))
+  def readAll(schema: StructType, tableName: String): RIO[IDManagerSparkService with Logging, DataFrame] =
+    RIO.accessM(_.get.readAll(schema, tableName))
 
   def fetchID(df: DataFrame): RIO[IDManagerSparkService with Logging, IDType] =
     RIO.accessM(_.get.fetchID(df))
 
-  def processData(id: IDType, df: DataFrame): ZIO[IDManagerSparkService with Logging, Throwable, DataFrame] =
-    RIO.accessM(_.get.processData(id, df))
+  def processData(id: IDType, df: DataFrame, tableName: String): ZIO[IDManagerSparkService with Logging, Throwable, DataFrame] =
+    RIO.accessM(_.get.processData(id, df, tableName))
 
-  def process(df: DataFrame): ZIO[IDManagerSparkService with Logging, Throwable, VertexData] =
-    RIO.accessM(_.get.process(df))
+  def process(df: DataFrame, tableName: String): ZIO[IDManagerSparkService with Logging, Throwable, VertexData] =
+    RIO.accessM(_.get.process(df, tableName))
 }
 
 final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConfig)
@@ -74,7 +74,7 @@ final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConf
   def addId(df: DataFrame, lastMax: IDType): DataFrame =
     SparkExtensions.zipWithIndex(df, lastMax + 1)
 
-  override def readAll(schema: StructType): ZIO[Logging, Throwable, DataFrame] =
+  override def readAll(schema: StructType, tableName: String): ZIO[Logging, Throwable, DataFrame] =
     ZIO.effect(spark.read.parquet(config.spark.dataPath)).catchSome {
       // Catch case where there is no data to read, this means this is being run on a new setup
       case e: org.apache.spark.sql.AnalysisException if e.message.contains("Unable to infer schema for Parquet") =>
@@ -86,17 +86,17 @@ final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConf
         )
     }
 
-  override def process(df: DataFrame): ZIO[Logging, Throwable, VertexData] =
+  override def process(df: DataFrame, tableName: String): ZIO[Logging, Throwable, VertexData] =
     for {
       // All the idmanager data so far ingested
-      idManagerDf <- readAll(df.schema)
+      idManagerDf <- readAll(df.schema, tableName)
       // Get the last max id used
       lastMax <- fetchID(idManagerDf)
       // Generate new ids for the `jobTime` data
-      dfWithId <- processData(lastMax, df)
+      dfWithId <- processData(lastMax, df, tableName)
     } yield VertexData(loaded = idManagerDf, current = dfWithId)
 
-  override def processData(id: IDType, df: DataFrame): ZIO[Logging, Throwable, DataFrame] = {
+  override def processData(id: IDType, df: DataFrame, tableName: String): ZIO[Logging, Throwable, DataFrame] = {
 
     val mode = SaveMode.Append
 
@@ -112,7 +112,7 @@ final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConf
           .format("parquet")
           .mode(mode)
           .partitionBy(PartitionManager.partitionColumns: _*)
-          .save(config.spark.dataPath)
+          .save(s"${config.spark.dataPath}/$tableName")
       )
     } yield dfWithIdCached
   }
