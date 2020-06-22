@@ -27,7 +27,7 @@ case class Alert(
   rfscore: Double,
   snnscore: Double,
   classtar: Double,
-  roid: Double,
+  roid: Int,
   mulens_class_1: Option[String] = None,
   mulens_class_2: Option[String] = None,
   year: Int,

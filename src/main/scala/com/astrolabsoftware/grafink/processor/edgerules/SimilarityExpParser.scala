@@ -76,12 +76,17 @@ object SimilarityExpParser {
       (mulens1_class_1 == "ML" && mulens1_class_2 == "ML") && (mulens2_class_1 == "ML" && mulens2_class_2 == "ML")
     }
 
+  val roidudf: UserDefinedFunction =
+    udf((score1: Int, score2: Int) => (score1 >= 1) && (score2 >= 1))
+
   val classtarudf: UserDefinedFunction =
     udf((score1: Double, score2: Double) => (score1 > 0.9 && score2 > 0.9) || (score1 < 0.1 && score2 < 0.1))
+
   val fieldToUdfEqualityMap: Map[String, UserDefinedFunction] = Map(
     "snnscore" -> scoreudf,
     "rfscore"  -> scoreudf,
     "mulens"   -> mulensmludf,
+    "roid"     -> roidudf,
     "classtar" -> classtarudf
   )
 }

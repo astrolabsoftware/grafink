@@ -39,7 +39,8 @@ object SimilarityExpParserSpec extends DefaultRunnableSpec {
                 col("mulens_class_22")
               ) === lit(true)) ||
                 (classtarudf(col("classtar1"), col("classtar2")) === lit(true)) ||
-                (col("roid1") <=> col("roid2")) || (col("cdsxmatch1") <=> col("cdsxmatch2")) || (col("objectId1") <=> col(
+                (roidudf(col("roid1"), col("roid2")) === lit(true)) ||
+                (col("cdsxmatch1") <=> col("cdsxmatch2")) || (col("objectId1") <=> col(
                 "objectId2"
               )),
               List("mulens", "classtar", "roid", "cdsxmatch", "objectId")
@@ -62,7 +63,8 @@ object SimilarityExpParserSpec extends DefaultRunnableSpec {
                   col("mulens_class_22")
                 ) === lit(true)) ||
                   (classtarudf(col("classtar1"), col("classtar2")) === lit(true)) ||
-                  (col("roid1") <=> col("roid2")) || (col("cdsxmatch1") <=> col("cdsxmatch2")) || (col("objectId1") <=> col(
+                  (roidudf(col("roid1"), col("roid2")) === lit(true)) ||
+                  (col("cdsxmatch1") <=> col("cdsxmatch2")) || (col("objectId1") <=> col(
                   "objectId2"
                 ))),
               List("rfscore", "snnscore", "mulens", "classtar", "roid", "cdsxmatch", "objectId")

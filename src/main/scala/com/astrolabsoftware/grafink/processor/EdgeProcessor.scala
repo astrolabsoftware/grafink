@@ -17,17 +17,17 @@
 package com.astrolabsoftware.grafink.processor
 
 import org.apache.spark.HashPartitioner
-import org.apache.spark.sql.{Dataset, SparkSession}
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.{GraphTraversal, GraphTraversalSource}
+import org.apache.spark.sql.{ Dataset, SparkSession }
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.{ GraphTraversal, GraphTraversalSource }
 import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.janusgraph.graphdb.database.StandardJanusGraph
 import zio._
 import zio.blocking.Blocking
-import zio.logging.{log, Logging}
+import zio.logging.{ log, Logging }
 
 import com.astrolabsoftware.grafink.JanusGraphEnv
 import com.astrolabsoftware.grafink.JanusGraphEnv.JanusGraphEnv
-import com.astrolabsoftware.grafink.Job.{SparkEnv, VertexData}
+import com.astrolabsoftware.grafink.Job.{ SparkEnv, VertexData }
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
 import com.astrolabsoftware.grafink.models.config.Config
 import com.astrolabsoftware.grafink.processor.EdgeProcessor.MakeEdge
@@ -139,9 +139,9 @@ final class EdgeProcessorLive(spark: SparkSession, config: JanusGraphConfig) ext
 
     val load = loaderFunc
 
-    ZIO.effect(edgesRDD.sparkSession.sparkContext.runJob(
-      edgesRDD.rdd.keyBy(_.src).partitionBy(new HashPartitioner(config.edgeLoader.parallelism)).values,
-      load)
+    ZIO.effect(
+      edgesRDD.sparkSession.sparkContext
+        .runJob(edgesRDD.rdd.keyBy(_.src).partitionBy(new HashPartitioner(config.edgeLoader.parallelism)).values, load)
     )
   }
 }

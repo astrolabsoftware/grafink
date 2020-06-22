@@ -21,7 +21,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
     _objectId: String,
     _rfscore: Double,
     _snnscore: Double,
-    _roid: Double,
+    _roid: Int,
     _classtar: Double,
     _cdsxmatch: Cdsxmatch,
     _mulens_class_1: Mulens,
@@ -60,7 +60,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _rfscore = 0.388,
               _snnscore = 0.36001157760620117,
               _classtar = 0.0,
-              _roid = 0.0,
+              _roid = 1,
               _cdsxmatch = Cdsxmatch_UNKNOWN,
               _mulens_class_1 = MULENS_NULL,
               _mulens_class_2 = MULENS_NULL
@@ -75,7 +75,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _rfscore = 0.988,
               _snnscore = 0.67001157760620889,
               _classtar = 0.0,
-              _roid = 0.0,
+              _roid = 0,
               _cdsxmatch = Cdsxmatch_UNKNOWN,
               _mulens_class_1 = MULENS_NULL,
               _mulens_class_2 = MULENS_NULL
@@ -97,7 +97,9 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
       testM("Similarity classifier will correctly calculate similarity") {
 
         val similarityConfig =
-          SimilarityConfig(similarityExp = "(rfscore AND snnscore) OR mulens OR classtar OR cdsxmatch OR objectId OR roid")
+          SimilarityConfig(similarityExp =
+            "(rfscore AND snnscore) OR mulens OR classtar OR cdsxmatch OR objectId OR roid"
+          )
 
         val similarityClassifer = new SimilarityClassifer(similarityConfig)
 
@@ -109,7 +111,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _rfscore = 0.99,
               _snnscore = 0.8,
               _classtar = 0.0,
-              _roid = 0.0,
+              _roid = 1,
               _cdsxmatch = Cdsxmatch_UNKNOWN,
               _mulens_class_1 = CONSTANT,
               _mulens_class_2 = CONSTANT
@@ -124,7 +126,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _rfscore = 0.95,
               _snnscore = 0.95,
               _classtar = 0.0,
-              _roid = 0.0,
+              _roid = 2,
               _cdsxmatch = Cdsxmatch_UNKNOWN,
               _mulens_class_1 = ML,
               _mulens_class_2 = CONSTANT
