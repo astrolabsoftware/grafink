@@ -97,7 +97,10 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
       testM("Similarity classifier will correctly calculate similarity") {
 
         val similarityConfig =
-          SimilarityConfig(similarityExp = "(rfscore AND snnscore) OR mulens OR classtar OR cdsxmatch OR objectId OR roid", parallelism = 2)
+          SimilarityConfig(
+            similarityExp = "(rfscore AND snnscore) OR mulens OR classtar OR cdsxmatch OR objectId OR roid",
+            parallelism = 2
+          )
 
         val similarityClassifer = new SimilarityClassifer(similarityConfig)
 

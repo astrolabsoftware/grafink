@@ -39,13 +39,15 @@ class SimilarityClassifer(config: SimilarityConfig) extends VertexClassifierRule
 
     val similarityExpression = config.similarityExp
     val parsed               = SimilarityExpParser.parse(similarityExpression)
-    val joinColumns = parsed.columns
-    val joinCondition = parsed.condition
+    val joinColumns          = parsed.columns
+    val joinCondition        = parsed.condition
 
     // TODO: Make this handling of mulens better
     @inline
     def selectCols(num: Int): List[Column] =
-      col("id") :: joinColumns.flatMap(f => if (f == "mulens") List("mulens_class_1", "mulens_class_2") else List(f)).map(x => col(x).as(s"${x}$num"))
+      col("id") :: joinColumns
+        .flatMap(f => if (f == "mulens") List("mulens_class_1", "mulens_class_2") else List(f))
+        .map(x => col(x).as(s"${x}$num"))
 
     val df1New = df.select(selectCols(1): _*)
     val df2Old = loadedDf.select(selectCols(2): _*)

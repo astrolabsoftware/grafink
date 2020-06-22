@@ -1,8 +1,9 @@
 package com.astrolabsoftware.grafink.services
 
+import java.io.File
 import java.time.LocalDate
 
-import zio.{ ZIO, ZLayer }
+import zio.{ Task, ZIO, ZLayer }
 import zio.test._
 import zio.test.Assertion._
 import zio.test.environment.TestConsole
@@ -68,7 +69,7 @@ object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
 
       val app = for {
         df         <- Reader.read(PartitionManager(date, 1))
-        vertexData <- IDManagerSparkService.process(df, "test")
+        vertexData <- IDManagerSparkService.process(df, "")
         idData     <- ZIO.effect(vertexData.current.select("id").collect)
         _          <- TempDirService.removeTempDir(tempDir)
         ids = idData.map(_.getLong(0))

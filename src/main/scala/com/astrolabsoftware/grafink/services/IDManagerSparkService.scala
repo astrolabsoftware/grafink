@@ -61,7 +61,11 @@ object IDManagerSparkService {
   def fetchID(df: DataFrame): RIO[IDManagerSparkService with Logging, IDType] =
     RIO.accessM(_.get.fetchID(df))
 
-  def processData(id: IDType, df: DataFrame, tableName: String): ZIO[IDManagerSparkService with Logging, Throwable, DataFrame] =
+  def processData(
+    id: IDType,
+    df: DataFrame,
+    tableName: String
+  ): ZIO[IDManagerSparkService with Logging, Throwable, DataFrame] =
     RIO.accessM(_.get.processData(id, df, tableName))
 
   def process(df: DataFrame, tableName: String): ZIO[IDManagerSparkService with Logging, Throwable, VertexData] =
@@ -75,11 +79,11 @@ final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConf
     SparkExtensions.zipWithIndex(df, lastMax + 1)
 
   override def readAll(schema: StructType, tableName: String): ZIO[Logging, Throwable, DataFrame] =
-    ZIO.effect(spark.read.parquet(config.spark.dataPath)).catchSome {
+    ZIO.effect(spark.read.parquet(s"${config.spark.dataPath}/$tableName")).catchSome {
       // Catch case where there is no data to read, this means this is being run on a new setup
       case e: org.apache.spark.sql.AnalysisException if e.message.contains("Unable to infer schema for Parquet") =>
         for {
-          _ <- log.warn(s"No data found at ${config.spark.dataPath}, returning empty dataframe")
+          _ <- log.warn(s"No data found at ${config.spark.dataPath}/$tableName, returning empty dataframe")
         } yield spark.createDataFrame(
           spark.sparkContext.emptyRDD[Row],
           StructType(StructField("id", LongType, false) +: schema.fields)

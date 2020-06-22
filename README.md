@@ -58,6 +58,25 @@ sbt ++2.11.11 dist
 
 ### Running Job
 
+To run locally
+
 ```
 ./bin/start.sh --config conf/application.conf --startdate <yyyy-MM-dd> --duration 1 --num-executors 2 --driver-memory 2g --executor-memory 2g
+```
+
+To run over Mesos cluster
+
+```
+export SPARK_MASTER="mesos://<host>:<port>"
+```
+
+The run
+
+```
+./bin/start.sh --config conf/application.conf --startdate <yyyy-MM-dd> --duration <number of days> --num-executors 10 --driver-memory 2g --executor-memory 1g --executor-cores 3 --conf spark.mesos.principal=<principal> --conf spark.mesos.secret=<secret> --conf spark.mesos.role=<role>
+```
+
+for eg:
+```
+./bin/start.sh --config conf/application.conf --startdate 2019-11-01 --duration 1 --num-executors 10 --driver-memory 2g --executor-memory 1g --executor-cores 3 --conf spark.mesos.principal=lsst --conf spark.mesos.secret=secret --conf spark.mesos.role=lsst
 ```
