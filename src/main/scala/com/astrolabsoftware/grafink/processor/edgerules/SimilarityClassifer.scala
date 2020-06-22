@@ -85,7 +85,6 @@ class SimilarityClassifer(config: SimilarityConfig) extends VertexClassifierRule
       .union(edgesToNewVertices)
       // Filter out any loop edges because of self join
       .filter(r => r.src != r.dst)
-      .repartition(config.parallelism, col("src"))
   }
 }
 

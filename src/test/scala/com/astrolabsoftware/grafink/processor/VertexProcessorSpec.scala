@@ -5,7 +5,6 @@ import java.time.LocalDate
 import scala.collection.JavaConverters._
 
 import zio.{ ZIO, ZLayer }
-import zio.blocking.Blocking
 import zio.test.{ DefaultRunnableSpec, _ }
 import zio.test.Assertion._
 import zio.test.environment.TestConsole
@@ -15,7 +14,7 @@ import com.astrolabsoftware.grafink.common.PartitionManager
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models._
-import com.astrolabsoftware.grafink.services.{ IDManager, IDManagerSparkService }
+import com.astrolabsoftware.grafink.services.IDManagerSparkService
 import com.astrolabsoftware.grafink.services.reader.Reader
 import com.astrolabsoftware.grafink.utils.{ JanusGraphTestEnv, SparkTestEnv, TempDirService }
 
@@ -36,7 +35,7 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
         JanusGraphConfig(
           SchemaConfig(vertexPropertyCols = List(""), vertexLabel = "", edgeLabels = List()),
           VertexLoaderConfig(10),
-          EdgeLoaderConfig(10, EdgeRulesConfig(SimilarityConfig("", 1))),
+          EdgeLoaderConfig(10, 1, EdgeRulesConfig(SimilarityConfig(""))),
           JanusGraphStorageConfig("", 0, tableName = "test")
         )
 

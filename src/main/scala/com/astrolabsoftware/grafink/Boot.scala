@@ -16,13 +16,11 @@
  */
 package com.astrolabsoftware.grafink
 
-import java.io.File
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 import zio._
 import zio.blocking.Blocking
-import zio.console.Console
 
 import com.astrolabsoftware.grafink.Job.JobTime
 import com.astrolabsoftware.grafink.logging.Logger
@@ -31,7 +29,7 @@ import com.astrolabsoftware.grafink.models.GrafinkException.BadArgumentsExceptio
 import com.astrolabsoftware.grafink.models.config.Config
 import com.astrolabsoftware.grafink.processor.{ EdgeProcessor, VertexProcessor }
 import com.astrolabsoftware.grafink.schema.SchemaLoader
-import com.astrolabsoftware.grafink.services.{ IDManager, IDManagerSparkService }
+import com.astrolabsoftware.grafink.services.IDManagerSparkService
 import com.astrolabsoftware.grafink.services.reader.Reader
 
 /**

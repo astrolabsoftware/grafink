@@ -20,6 +20,7 @@ lazy val root =
     .settings(
       // Add support for scala version 2.11
       crossScalaVersions := Seq("2.11.11", (ThisBuild / scalaVersion).value),
+      buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
       stdSettings
     )
 

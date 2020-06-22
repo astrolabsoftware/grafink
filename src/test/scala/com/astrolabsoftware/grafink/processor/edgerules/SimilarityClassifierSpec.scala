@@ -48,7 +48,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
       testM("Similarity classifier will correctly make an edge between new and old vertices") {
 
         val similarityConfig =
-          SimilarityConfig(similarityExp = "rfscore OR objectId", parallelism = 2)
+          SimilarityConfig(similarityExp = "rfscore OR objectId")
 
         val similarityClassifer = new SimilarityClassifer(similarityConfig)
 
@@ -97,10 +97,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
       testM("Similarity classifier will correctly calculate similarity") {
 
         val similarityConfig =
-          SimilarityConfig(
-            similarityExp = "(rfscore AND snnscore) OR mulens OR classtar OR cdsxmatch OR objectId OR roid",
-            parallelism = 2
-          )
+          SimilarityConfig(similarityExp = "(rfscore AND snnscore) OR mulens OR classtar OR cdsxmatch OR objectId OR roid")
 
         val similarityClassifer = new SimilarityClassifer(similarityConfig)
 
