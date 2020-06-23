@@ -61,7 +61,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _snnscore = 0.36001157760620117,
               _classtar = 0.0,
               _roid = 1,
-              _cdsxmatch = Cdsxmatch_UNKNOWN,
+              _cdsxmatch = WDStar,
               _mulens_class_1 = MULENS_NULL,
               _mulens_class_2 = MULENS_NULL
             )
@@ -111,8 +111,8 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _rfscore = 0.99,
               _snnscore = 0.8,
               _classtar = 0.0,
-              _roid = 1,
-              _cdsxmatch = Cdsxmatch_UNKNOWN,
+              _roid = 3,
+              _cdsxmatch = CStar,
               _mulens_class_1 = CONSTANT,
               _mulens_class_2 = CONSTANT
             )
@@ -127,7 +127,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _snnscore = 0.95,
               _classtar = 0.0,
               _roid = 2,
-              _cdsxmatch = Cdsxmatch_UNKNOWN,
+              _cdsxmatch = CStar,
               _mulens_class_1 = ML,
               _mulens_class_2 = CONSTANT
             )

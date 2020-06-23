@@ -12,16 +12,16 @@ object SimilarityExpParserSpec extends DefaultRunnableSpec {
     suite("SimilarityExpParserSpec")(
       test("Similarity expression parser will correctly parse given expression part I") {
 
-        val exp    = "(rfscore AND snnscore) OR cdsxmatch"
+        val exp    = "(rfscore AND snnscore) OR objectId"
         val result = SimilarityExpParser.parse(exp)
         assert(result)(
           equalTo(
             ParseResult(
               (scoreudf(col("rfscore1"), col("rfscore2")) === lit(true)) &&
-                (scoreudf(col("snnscore1"), col("snnscore2")) === lit(true)) || (col("cdsxmatch1") <=> col(
-                "cdsxmatch2"
+                (scoreudf(col("snnscore1"), col("snnscore2")) === lit(true)) || (col("objectId1") <=> col(
+                "objectId2"
               )),
-              List("rfscore", "snnscore", "cdsxmatch")
+              List("rfscore", "snnscore", "objectId")
             )
           )
         )
@@ -40,9 +40,8 @@ object SimilarityExpParserSpec extends DefaultRunnableSpec {
               ) === lit(true)) ||
                 (classtarudf(col("classtar1"), col("classtar2")) === lit(true)) ||
                 (roidudf(col("roid1"), col("roid2")) === lit(true)) ||
-                (col("cdsxmatch1") <=> col("cdsxmatch2")) || (col("objectId1") <=> col(
-                "objectId2"
-              )),
+                (cdsxmatchudf(col("cdsxmatch1"), col("cdsxmatch2")) === lit(true)) ||
+                (col("objectId1") <=> col("objectId2")),
               List("mulens", "classtar", "roid", "cdsxmatch", "objectId")
             )
           )
@@ -64,9 +63,8 @@ object SimilarityExpParserSpec extends DefaultRunnableSpec {
                 ) === lit(true)) ||
                   (classtarudf(col("classtar1"), col("classtar2")) === lit(true)) ||
                   (roidudf(col("roid1"), col("roid2")) === lit(true)) ||
-                  (col("cdsxmatch1") <=> col("cdsxmatch2")) || (col("objectId1") <=> col(
-                  "objectId2"
-                ))),
+                  (cdsxmatchudf(col("cdsxmatch1"), col("cdsxmatch2")) === lit(true)) ||
+                  (col("objectId1") <=> col("objectId2"))),
               List("rfscore", "snnscore", "mulens", "classtar", "roid", "cdsxmatch", "objectId")
             )
           )
