@@ -52,6 +52,9 @@ do
     --executor-cores)
       shift
       SPARKVARS="$SPARKVARS--executor-cores $1 ";;
+    --total-executor-cores)
+      shift
+      SPARKVARS="$SPARKVARS--total-executor-cores $1 ";;
     --conf)
       shift
       SPARKVARS="$SPARKVARS--conf $1 ";;
