@@ -17,8 +17,8 @@ object SimilarityExpParserSpec extends DefaultRunnableSpec {
         assert(result)(
           equalTo(
             ParseResult(
-              (scoreudf(col("rfscore1"), col("rfscore2")) === lit(true)) &&
-                (scoreudf(col("snnscore1"), col("snnscore2")) === lit(true)) || (col("objectId1") <=> col(
+              (((col("rfscore1") > 0.9) && (col("rfscore2") > 0.9)) &&
+                ((col("snnscore1") > 0.9) && (col("snnscore2") > 0.9))) || (col("objectId1") <=> col(
                 "objectId2"
               )),
               List("rfscore", "snnscore", "objectId")
@@ -32,15 +32,13 @@ object SimilarityExpParserSpec extends DefaultRunnableSpec {
         assert(result)(
           equalTo(
             ParseResult(
-              (mulensmludf(
-                col("mulens_class_11"),
-                col("mulens_class_21"),
-                col("mulens_class_12"),
-                col("mulens_class_22")
-              ) === lit(true)) ||
-                (classtarudf(col("classtar1"), col("classtar2")) === lit(true)) ||
-                (roidudf(col("roid1"), col("roid2")) === lit(true)) ||
-                (cdsxmatchudf(col("cdsxmatch1"), col("cdsxmatch2")) === lit(true)) ||
+              (((col("mulens_class_11") === "ML") && (col("mulens_class_21") === "ML")) &&
+                ((col("mulens_class_12") === "ML") && (col("mulens_class_22") === "ML"))) ||
+                (((col("classtar1") > 0.9) && (col("classtar2") > 0.9)) || ((col("classtar1") < 0.1) && (col(
+                  "classtar2"
+                ) < 0.1))) ||
+                ((col("roid1") > 1) && (col("roid2") > 1)) ||
+                ((col("cdsxmatch1") =!= "Unknown") && (col("cdsxmatch1") === col("cdsxmatch2"))) ||
                 (col("objectId1") <=> col("objectId2")),
               List("mulens", "classtar", "roid", "cdsxmatch", "objectId")
             )
@@ -53,17 +51,15 @@ object SimilarityExpParserSpec extends DefaultRunnableSpec {
         assert(result)(
           equalTo(
             ParseResult(
-              (scoreudf(col("rfscore1"), col("rfscore2")) === lit(true)) &&
-                (scoreudf(col("snnscore1"), col("snnscore2")) === lit(true)) ||
-                ((mulensmludf(
-                  col("mulens_class_11"),
-                  col("mulens_class_21"),
-                  col("mulens_class_12"),
-                  col("mulens_class_22")
-                ) === lit(true)) ||
-                  (classtarudf(col("classtar1"), col("classtar2")) === lit(true)) ||
-                  (roidudf(col("roid1"), col("roid2")) === lit(true)) ||
-                  (cdsxmatchudf(col("cdsxmatch1"), col("cdsxmatch2")) === lit(true)) ||
+              (((col("rfscore1") > 0.9) && (col("rfscore2") > 0.9)) &&
+                ((col("snnscore1") > 0.9) && (col("snnscore2") > 0.9))) ||
+                ((((col("mulens_class_11") === "ML") && (col("mulens_class_21") === "ML")) &&
+                  ((col("mulens_class_12") === "ML") && (col("mulens_class_22") === "ML"))) ||
+                  (((col("classtar1") > 0.9) && (col("classtar2") > 0.9)) || ((col("classtar1") < 0.1) && (col(
+                    "classtar2"
+                  ) < 0.1))) ||
+                  ((col("roid1") > 1) && (col("roid2") > 1)) ||
+                  ((col("cdsxmatch1") =!= "Unknown") && (col("cdsxmatch1") === col("cdsxmatch2"))) ||
                   (col("objectId1") <=> col("objectId2"))),
               List("rfscore", "snnscore", "mulens", "classtar", "roid", "cdsxmatch", "objectId")
             )

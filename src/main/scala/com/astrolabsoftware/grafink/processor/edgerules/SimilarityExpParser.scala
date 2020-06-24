@@ -13,26 +13,25 @@ object SimilarityExpParser {
 
   case class ParseResult(condition: Column, columns: List[String])
 
-  def colNameToCondition(name: String, prefix1: String = "", prefix2: String = ""): Column =
-    if (fieldToUdfEqualityMap.contains(name)) {
-      // This column requires udf matching instead of normal equality operator
-      val udf = fieldToUdfEqualityMap(name)
-      if (name == "mulens") {
-        // Special handling for mulens
-        val class1 = s"${name}_class_1"
-        val class2 = s"${name}_class_2"
-        udf(
-          col(s"$prefix1${class1}1"),
-          col(s"$prefix1${class2}1"),
-          col(s"$prefix2${class1}2"),
-          col(s"$prefix2${class2}2")
-        ) === lit(true)
-      } else {
-        udf(col(s"$prefix1${name}1"), col(s"$prefix2${name}2")) === lit(true)
-      }
+  def colNameToCondition(name: String, prefix1: String = "", prefix2: String = ""): Column = {
+    val col1 = s"$prefix1${name}1"
+    val col2 = s"$prefix2${name}2"
+    if (fieldToSimilarityCondtitionMap.contains(name)) {
+      (fieldToSimilarityCondtitionMap(name)(col(col1), col(col2)))
+    } else if (name == "mulens") {
+      // Special handling for mulens
+      val class1 = s"${name}_class_1"
+      val class2 = s"${name}_class_2"
+      mulensmlCond(
+        col(s"$prefix1${class1}1"),
+        col(s"$prefix1${class2}1"),
+        col(s"$prefix2${class1}2"),
+        col(s"$prefix2${class2}2")
+      )
     } else {
-      col(s"$prefix1${name}1") <=> col(s"$prefix2${name}2")
+      col(col1) <=> col(col2)
     }
+  }
 
   def colName[_: P]: P[ParseResult] =
     P(
@@ -69,28 +68,22 @@ object SimilarityExpParser {
         throw BadSimilarityExpression(longAggMsg)
     }
 
-  val scoreudf: UserDefinedFunction =
-    udf((score1: Double, score2: Double) => (score1 > 0.9) && (score2 > 0.9))
-  val mulensmludf: UserDefinedFunction =
-    udf { (mulens1_class_1: String, mulens1_class_2: String, mulens2_class_1: String, mulens2_class_2: String) =>
-      (mulens1_class_1 == "ML" && mulens1_class_2 == "ML") && (mulens2_class_1 == "ML" && mulens2_class_2 == "ML")
-    }
+  val scoreCond: (Column, Column) => Column = (score1, score2) => (score1 > 0.9) && (score2 > 0.9)
+  val cdsxmatchCond: (Column, Column) => Column = (cdsxmatch1, cdsxmatch2) =>
+    (cdsxmatch1 =!= "Unknown") && (cdsxmatch1 === cdsxmatch2)
+  val roidCond: (Column, Column) => Column = (roid1, roid2) => (roid1 > 1) && (roid2 > 1)
+  val classtarCond: (Column, Column) => Column = (classtar1, classtar2) =>
+    ((classtar1 > 0.9) && (classtar2 > 0.9)) || ((classtar1 < 0.1) && (classtar2 < 0.1))
 
-  val roidudf: UserDefinedFunction =
-    udf((score1: Int, score2: Int) => (score1 > 1) && (score2 > 1))
+  val mulensmlCond: (Column, Column, Column, Column) => Column =
+    (mulens1_class_1, mulens1_class_2, mulens2_class_1, mulens2_class_2) =>
+      (mulens1_class_1 === "ML" && mulens1_class_2 === "ML") && (mulens2_class_1 === "ML" && mulens2_class_2 === "ML")
 
-  val classtarudf: UserDefinedFunction =
-    udf((score1: Double, score2: Double) => ((score1 > 0.9) && (score2 > 0.9)) || ((score1 < 0.1) && (score2 < 0.1)))
-
-  val cdsxmatchudf: UserDefinedFunction =
-    udf((cdsxmatch1: String, cdsxmatch2: String) => (cdsxmatch1 != "Unknown") && (cdsxmatch1 == cdsxmatch2))
-
-  val fieldToUdfEqualityMap: Map[String, UserDefinedFunction] = Map(
-    "snnscore" -> scoreudf,
-    "rfscore"  -> scoreudf,
-    "mulens"   -> mulensmludf,
-    "cdsxmatch" -> cdsxmatchudf,
-    "roid"     -> roidudf,
-    "classtar" -> classtarudf
+  val fieldToSimilarityCondtitionMap: Map[String, (Column, Column) => Column] = Map(
+    "snnscore"  -> scoreCond,
+    "rfscore"   -> scoreCond,
+    "cdsxmatch" -> cdsxmatchCond,
+    "roid"      -> roidCond,
+    "classtar"  -> classtarCond
   )
 }
