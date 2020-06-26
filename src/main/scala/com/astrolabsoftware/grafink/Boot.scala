@@ -60,15 +60,14 @@ object Boot extends App {
 
     val program = parseArgs(args.toArray) match {
       case Some(argsConfig) =>
-        val logger      = Logger.live
-        val configLayer = logger >>> Config.live(argsConfig.confFile)
-        val sparkLayer  = ZLayer.requires[Blocking] >>> SparkEnv.cluster
-        // val janusGraphLayer      = ZLayer.requires[Blocking] ++ configLayer >>> JanusGraphEnv.hbase
+        val logger               = Logger.live
+        val configLayer          = logger >>> Config.live(argsConfig.confFile)
+        val sparkLayer           = ZLayer.requires[Blocking] >>> SparkEnv.cluster
         val schemaLoaderLayer    = logger ++ configLayer >>> SchemaLoader.live
         val idManagerLayer       = logger ++ sparkLayer ++ configLayer >>> IDManagerSparkService.live
         val readerLayer          = logger ++ sparkLayer ++ configLayer >>> Reader.live
-        val vertexProcessorLayer = logger ++ sparkLayer ++ configLayer >>> VertexProcessor.live
-        val edgeProcessorLayer   = logger ++ sparkLayer ++ configLayer >>> EdgeProcessor.live
+        val vertexProcessorLayer = logger ++ configLayer >>> VertexProcessor.live
+        val edgeProcessorLayer   = logger ++ configLayer >>> EdgeProcessor.live
 
         Job
           .runGrafinkJob(JobTime(argsConfig.startDate, argsConfig.duration))

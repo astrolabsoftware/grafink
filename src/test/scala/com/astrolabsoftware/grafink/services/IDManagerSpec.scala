@@ -42,7 +42,7 @@ object IDManagerSpec extends DefaultRunnableSpec {
           JanusGraphConfig(
             SchemaConfig(List(""), "", List()),
             VertexLoaderConfig(10),
-            EdgeLoaderConfig(10, 1, EdgeRulesConfig(SimilarityConfig(""))),
+            EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig(""))),
             JanusGraphStorageConfig("", 0, janusGraphTableName)
           )
         )

@@ -16,27 +16,26 @@
  */
 package com.astrolabsoftware.grafink.processor
 
-import org.apache.spark.HashPartitioner
 import org.apache.spark.sql.{ Dataset, SparkSession }
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.{ GraphTraversal, GraphTraversalSource }
 import org.apache.tinkerpop.gremlin.structure.Vertex
+import org.janusgraph.core.JanusGraph
 import org.janusgraph.graphdb.database.StandardJanusGraph
 import zio._
-import zio.blocking.Blocking
 import zio.logging.{ log, Logging }
 
-import com.astrolabsoftware.grafink.JanusGraphEnv
-import com.astrolabsoftware.grafink.JanusGraphEnv.JanusGraphEnv
+import com.astrolabsoftware.grafink.JanusGraphEnv.withGraph
 import com.astrolabsoftware.grafink.Job.{ SparkEnv, VertexData }
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
 import com.astrolabsoftware.grafink.models.config.Config
-import com.astrolabsoftware.grafink.processor.EdgeProcessor.MakeEdge
+import com.astrolabsoftware.grafink.processor.EdgeProcessor.{ EdgeStats, MakeEdge }
 import com.astrolabsoftware.grafink.processor.edgerules.VertexClassifierRule
 
 object EdgeProcessor {
 
   // TODO Support proper data type for edge properties, and support multiple properties
   case class MakeEdge(src: Long, dst: Long, propVal: Long)
+  case class EdgeStats(count: Int, partitions: Int)
 
   type EdgeProcessorService = Has[EdgeProcessor.Service]
 
@@ -45,12 +44,11 @@ object EdgeProcessor {
     def loadEdges(edgesRDD: Dataset[MakeEdge], label: String): ZIO[Logging, Throwable, Unit]
   }
 
-  val live: URLayer[SparkEnv with Has[JanusGraphConfig] with Logging, EdgeProcessorService] =
+  val live: URLayer[Has[JanusGraphConfig] with Logging, EdgeProcessorService] =
     ZLayer.fromEffect(
       for {
-        spark            <- ZIO.access[SparkEnv](_.get.sparkEnv)
         janusGraphConfig <- Config.janusGraphConfig
-      } yield new EdgeProcessorLive(spark, janusGraphConfig)
+      } yield EdgeProcessorLive(janusGraphConfig)
     )
 
   def process(
@@ -60,7 +58,7 @@ object EdgeProcessor {
     ZIO.accessM(_.get.process(vertexData, rules))
 }
 
-final class EdgeProcessorLive(spark: SparkSession, config: JanusGraphConfig) extends EdgeProcessor.Service {
+final case class EdgeProcessorLive(config: JanusGraphConfig) extends EdgeProcessor.Service with Serializable {
 
   override def process(vertexData: VertexData, rules: List[VertexClassifierRule]): ZIO[Logging, Throwable, Unit] =
     for {
@@ -72,76 +70,79 @@ final class EdgeProcessorLive(spark: SparkSession, config: JanusGraphConfig) ext
       })
     } yield ()
 
-  override def loadEdges(edgesRDD: Dataset[MakeEdge], label: String): ZIO[Logging, Throwable, Unit] = {
-
+  def job(
+    config: JanusGraphConfig,
+    graph: JanusGraph,
+    label: String,
+    partition: Iterator[MakeEdge]
+  ): ZIO[Any, Throwable, Unit] = {
     val batchSize = config.edgeLoader.batchSize
-    val c         = config
-
-    // Vertex cache
-    val vCache = ZRef.make(Map.empty[Long, GraphTraversal[Vertex, Vertex]])
-    // Add edges to all rows within a partition
-
-    def loaderFunc: (Iterator[MakeEdge]) => Unit = (partition: Iterator[MakeEdge]) => {
-
-      val janusGraphLayer = (Blocking.live ++ ZLayer.succeed(c)) >>> JanusGraphEnv.hbase()
-
-      // TODO: Remove as not used and not possible to cache here
-      @inline
-      def getFromCacheOrGraph(g: GraphTraversalSource, id: Long): ZIO[Any, Throwable, GraphTraversal[Vertex, Vertex]] =
-        for {
-          cacheRef <- vCache
-          cache    <- cacheRef.get
-          vertex <- ZIO
-            .fromOption(cache.get(id))
-            .orElse(
+    val g         = graph.traversal()
+    val idManager = graph.asInstanceOf[StandardJanusGraph].getIDManager
+    val kgroup    = partition.grouped(batchSize)
+    val l = kgroup.map(group =>
+      for {
+        _ <- ZIO.collectAll_(
+          group.map {
+            r =>
+              // TODO: Optimize
               for {
-                v <- ZIO.effect(g.V(java.lang.Long.valueOf(id)))
-                _ <- cacheRef.update(_.updated(id, v))
-              } yield v
-            )
-        } yield vertex
+                // Safe to get here since we know its already loaded
+                srcVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.src))))
+                dstVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.dst))))
+                _         <- ZIO.effect(srcVertex.addE(label).to(dstVertex).property("value", r.propVal).iterate)
+                // Add reverse edge as well
+                srcVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.src))))
+                dstVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.dst))))
+                _         <- ZIO.effect(dstVertex.addE(label).to(srcVertex).property("value", r.propVal).iterate)
+              } yield ()
+          }
+        )
+        _ <- ZIO.effect(g.tx.commit)
+      } yield ()
+    )
+    for {
+      _ <- ZIO.collectAll_(l.toIterable)
+      // Additional commit if anything left
+      _ <- ZIO.effect(g.tx.commit)
+      // Make this managed
+      _ <- ZIO.effect(g.close)
+    } yield ()
+  }
 
-      val job =
-        for {
-          graph <- ZIO.access[JanusGraphEnv](_.get.graph)
-          g         = graph.traversal()
-          idManager = graph.asInstanceOf[StandardJanusGraph].getIDManager
-          kgroup    = partition.grouped(batchSize)
-          l = kgroup.map(group =>
-            for {
-              _ <- ZIO.collectAll_(
-                group.map {
-                  r =>
-                    // TODO: Optimize
-                    for {
-                      // Safe to get here since we know its already loaded
-                      srcVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.src))))
-                      dstVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.dst))))
-                      _         <- ZIO.effect(srcVertex.addE(label).to(dstVertex).property("value", r.propVal).iterate)
-                      // Add reverse edge as well
-                      srcVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.src))))
-                      dstVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.dst))))
-                      _         <- ZIO.effect(dstVertex.addE(label).to(srcVertex).property("value", r.propVal).iterate)
-                    } yield ()
-                }
-              )
-              _ <- ZIO.effect(g.tx.commit)
-            } yield ()
-          )
-          _ <- ZIO.collectAll_(l.toIterable)
-          // Additional commit if anything left
-          _ <- ZIO.effect(g.tx.commit)
-          // Make this managed
-          _ <- ZIO.effect(g.close)
-        } yield ()
-      zio.Runtime.default.unsafeRun(job.provideLayer(janusGraphLayer))
+  def getParallelism(edges: Dataset[MakeEdge]): ZIO[Any, Throwable, EdgeStats] =
+    for {
+      numberOfEdgesToLoad <- ZIO.effect(edges.count.toInt)
+    } yield {
+      val numPartitions = if (numberOfEdgesToLoad < config.edgeLoader.taskSize) {
+        config.edgeLoader.parallelism
+      } else {
+        scala.math.max((numberOfEdgesToLoad / config.edgeLoader.taskSize) + 1, config.edgeLoader.parallelism)
+      }
+      EdgeStats(count = numberOfEdgesToLoad, numPartitions)
     }
 
-    val load = loaderFunc
+  override def loadEdges(edges: Dataset[MakeEdge], label: String): ZIO[Logging, Throwable, Unit] = {
 
-    ZIO.effect(
-      edgesRDD.sparkSession.sparkContext
-        .runJob(edgesRDD.rdd.keyBy(_.src).partitionBy(new HashPartitioner(config.edgeLoader.parallelism)).values, load)
-    )
+    val c = config
+
+    // Add edges to all rows within a partition
+    def load: (Iterator[MakeEdge]) => Unit = (partition: Iterator[MakeEdge]) => {
+      val executorJob = withGraph(c, graph => job(c, graph, label, partition))
+      zio.Runtime.default.unsafeRun(executorJob)
+    }
+
+    import org.apache.spark.sql.functions.col
+
+    for {
+      stats        <- getParallelism(edges)
+      preparedData <- ZIO.effect(edges.repartition(stats.partitions, col("src")))
+      _ <- ZIO
+        .effect(preparedData.foreachPartition(load))
+        .fold(
+          f => log.error(s"Error while loading edges $f"),
+          _ => log.info(s"Successfully loaded ${stats.count} edges to graph backed by ${config.storage.tableName}")
+        )
+    } yield ()
   }
 }

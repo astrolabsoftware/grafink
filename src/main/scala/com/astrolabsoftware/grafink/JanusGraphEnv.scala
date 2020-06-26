@@ -18,37 +18,14 @@ package com.astrolabsoftware.grafink
 
 import org.janusgraph.core.{ JanusGraph, JanusGraphFactory }
 import org.janusgraph.diskstorage.util.time.TimestampProviders
-import zio.{ Has, ZIO, ZLayer, ZManaged }
-import zio.blocking.Blocking
+import zio.{ ZIO, ZManaged }
 import zio.logging.{ log, Logging }
 
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
 
 object JanusGraphEnv extends Serializable {
 
-  type JanusGraphEnv = Has[JanusGraphEnv.Service]
-
-  trait Service {
-    val graph: JanusGraph
-  }
-
-  def make(
-    graph: JanusGraphConfig => JanusGraph
-  ): ZLayer[Blocking with Has[JanusGraphConfig], Throwable, Has[Service]] =
-    ZLayer.fromFunctionManyM { blockingWithConfig =>
-      blockingWithConfig.get
-        .effectBlocking(graph)
-        .map { jGraph =>
-          Has(new Service {
-            override val graph: JanusGraph = jGraph(blockingWithConfig.get[JanusGraphConfig])
-          })
-        }
-    }
-
-  def hbase(): ZLayer[Blocking with Has[JanusGraphConfig], Throwable, Has[Service]] =
-    make(config => withHBaseStorageWithBulkLoad(config))
-
-  private def releaseGraph: JanusGraph => zio.URIO[Any, ZIO[Logging, Nothing, Unit]] =
+  def releaseGraph: JanusGraph => zio.URIO[Any, ZIO[Logging, Nothing, Unit]] =
     (graph: JanusGraph) =>
       ZIO
         .effect(graph.close())
@@ -114,4 +91,7 @@ object JanusGraphEnv extends Serializable {
         // Allow setting vertex ids
         .set("graph.set-vertex-id", true)
         .open()
+
+  def withGraph(config: JanusGraphConfig, use: JanusGraph => ZIO[Any, Throwable, Unit]): ZIO[Any, Throwable, Unit] =
+    ZIO.effect(withHBaseStorageWithBulkLoad(config)).bracket(releaseGraph, use)
 }

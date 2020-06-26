@@ -1,9 +1,8 @@
 package com.astrolabsoftware.grafink.services
 
-import java.io.File
 import java.time.LocalDate
 
-import zio.{ Task, ZIO, ZLayer }
+import zio.{ ZIO, ZLayer }
 import zio.test._
 import zio.test.Assertion._
 import zio.test.environment.TestConsole

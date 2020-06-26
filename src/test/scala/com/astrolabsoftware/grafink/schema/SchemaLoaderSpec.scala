@@ -42,7 +42,7 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
             edgeLabels = List(EdgeLabelConfig("similarity", Map("key" -> "value", "typ" -> "long")))
           ),
           VertexLoaderConfig(10),
-          EdgeLoaderConfig(100, 10, EdgeRulesConfig(SimilarityConfig("rfscore"))),
+          EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore"))),
           JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph")
         )
 

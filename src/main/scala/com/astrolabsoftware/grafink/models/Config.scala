@@ -41,7 +41,7 @@ case class SimilarityConfig(similarityExp: String)
 
 case class EdgeRulesConfig(similarityClassifer: SimilarityConfig)
 
-case class EdgeLoaderConfig(batchSize: Int, parallelism: Int, rules: EdgeRulesConfig)
+case class EdgeLoaderConfig(batchSize: Int, parallelism: Int, taskSize: Int, rules: EdgeRulesConfig)
 
 case class JanusGraphStorageConfig(host: String, port: Int, tableName: String)
 
