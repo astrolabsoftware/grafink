@@ -51,7 +51,7 @@ object VertexProcessor {
 
 }
 
-final case class VertexProcessorLive(config: JanusGraphConfig) extends VertexProcessor.Service with Serializable {
+final case class VertexProcessorLive(config: JanusGraphConfig) extends VertexProcessor.Service {
 
   def job(
     config: JanusGraphConfig,
@@ -113,11 +113,14 @@ final case class VertexProcessorLive(config: JanusGraphConfig) extends VertexPro
     val c                                                    = config
     val vertexProperties                                     = config.schema.vertexPropertyCols
     val dataTypeForVertexPropertyCols: Map[String, DataType] = getDataTypeForVertexProperties(vertexProperties, df)
+    val jobFunc                                              = job _
 
-    def load: (Iterator[Row]) => Unit = (partition: Iterator[Row]) => {
-      val executorJob = withGraph(c, graph => job(c, graph, dataTypeForVertexPropertyCols, partition))
+    def loadFunc: (Iterator[Row]) => Unit = (partition: Iterator[Row]) => {
+      val executorJob = withGraph(c, graph => jobFunc(c, graph, dataTypeForVertexPropertyCols, partition))
       zio.Runtime.default.unsafeRun(executorJob)
     }
+
+    val load = loadFunc
 
     ZIO.effect(df.foreachPartition(load))
   }

@@ -26,6 +26,26 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
   val sparkLayer = SparkTestEnv.test
 
   def spec: ZSpec[Environment, Failure] = suite("VertexProcessorSpec")(
+    test("EdgeProcessor will correctly calculate parallelism for edge data") {
+      val edgeLabel         = "similarity"
+      val taskSize          = 2500
+      val parallelismConfig = 10
+      val similarityConfig  = SimilarityConfig("(rfscore AND snnscore) OR objectId")
+      val janusConfig =
+        JanusGraphConfig(
+          SchemaConfig(
+            vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
+            vertexLabel = "type",
+            edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long")))
+          ),
+          VertexLoaderConfig(10),
+          EdgeLoaderConfig(10, parallelismConfig, taskSize, EdgeRulesConfig(similarityConfig)),
+          JanusGraphStorageConfig("", 0, tableName = "test")
+        )
+      val parallelism1 = EdgeProcessorLive(janusConfig).getParallelism(3000).partitions
+      val parallelism2 = EdgeProcessorLive(janusConfig).getParallelism(300000).partitions
+      assert(parallelism1)(equalTo(parallelismConfig)) && assert(parallelism2)(equalTo(121))
+    },
     testM("EdgeProcessor will correctly add edges into janusgraph") {
       val dateString       = "2019-02-01"
       val date             = LocalDate.parse(dateString, dateFormat)

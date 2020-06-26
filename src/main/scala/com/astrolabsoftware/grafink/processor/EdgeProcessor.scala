@@ -16,9 +16,8 @@
  */
 package com.astrolabsoftware.grafink.processor
 
+import org.apache.spark.HashPartitioner
 import org.apache.spark.sql.{ Dataset, SparkSession }
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.{ GraphTraversal, GraphTraversalSource }
-import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.janusgraph.core.JanusGraph
 import org.janusgraph.graphdb.database.StandardJanusGraph
 import zio._
@@ -58,7 +57,7 @@ object EdgeProcessor {
     ZIO.accessM(_.get.process(vertexData, rules))
 }
 
-final case class EdgeProcessorLive(config: JanusGraphConfig) extends EdgeProcessor.Service with Serializable {
+final case class EdgeProcessorLive(config: JanusGraphConfig) extends EdgeProcessor.Service {
 
   override def process(vertexData: VertexData, rules: List[VertexClassifierRule]): ZIO[Logging, Throwable, Unit] =
     for {
@@ -110,35 +109,38 @@ final case class EdgeProcessorLive(config: JanusGraphConfig) extends EdgeProcess
     } yield ()
   }
 
-  def getParallelism(edges: Dataset[MakeEdge]): ZIO[Any, Throwable, EdgeStats] =
-    for {
-      numberOfEdgesToLoad <- ZIO.effect(edges.count.toInt)
-    } yield {
-      val numPartitions = if (numberOfEdgesToLoad < config.edgeLoader.taskSize) {
-        config.edgeLoader.parallelism
-      } else {
-        scala.math.max((numberOfEdgesToLoad / config.edgeLoader.taskSize) + 1, config.edgeLoader.parallelism)
-      }
-      EdgeStats(count = numberOfEdgesToLoad, numPartitions)
+  def getParallelism(numberOfEdgesToLoad: Int): EdgeStats = {
+    val numPartitions = if (numberOfEdgesToLoad < config.edgeLoader.taskSize) {
+      config.edgeLoader.parallelism
+    } else {
+      scala.math.max((numberOfEdgesToLoad / config.edgeLoader.taskSize) + 1, config.edgeLoader.parallelism)
     }
+    EdgeStats(count = numberOfEdgesToLoad, numPartitions)
+  }
 
   override def loadEdges(edges: Dataset[MakeEdge], label: String): ZIO[Logging, Throwable, Unit] = {
 
-    val c = config
+    val c       = config
+    val jobFunc = job _
 
     // Add edges to all rows within a partition
-    def load: (Iterator[MakeEdge]) => Unit = (partition: Iterator[MakeEdge]) => {
-      val executorJob = withGraph(c, graph => job(c, graph, label, partition))
+    def loadFunc: (Iterator[MakeEdge]) => Unit = (partition: Iterator[MakeEdge]) => {
+      val executorJob = withGraph(c, graph => jobFunc(c, graph, label, partition))
       zio.Runtime.default.unsafeRun(executorJob)
     }
 
-    import org.apache.spark.sql.functions.col
+    val load = loadFunc
 
     for {
-      stats        <- getParallelism(edges)
-      preparedData <- ZIO.effect(edges.repartition(stats.partitions, col("src")))
+      numberOfEdgesToLoad <- ZIO.effect(edges.count.toInt)
+      stats = getParallelism(numberOfEdgesToLoad)
+      // We do .rdd.keyBy here because running edges.foreachPartition strangely results in a very slow deserialization job with small number of partitions
+      // Before running the actual load, if there is a repartition just before the call to .rdd
       _ <- ZIO
-        .effect(preparedData.foreachPartition(load))
+        .effect(
+          edges.sparkSession.sparkContext
+            .runJob(edges.rdd.keyBy(_.src).partitionBy(new HashPartitioner(stats.partitions)).values, load)
+        )
         .fold(
           f => log.error(s"Error while loading edges $f"),
           _ => log.info(s"Successfully loaded ${stats.count} edges to graph backed by ${config.storage.tableName}")
