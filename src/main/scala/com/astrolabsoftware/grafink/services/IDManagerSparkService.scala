@@ -28,6 +28,13 @@ import com.astrolabsoftware.grafink.models.IDManagerConfig
 import com.astrolabsoftware.grafink.models.config.Config
 import com.astrolabsoftware.grafink.services.IDManager.IDType
 
+/**
+ * An id manager service using spark.
+ * This will store the data along with generated ids at
+ * a configured location, per hbase table.
+ * To generate new ids, we take the max id from existing data
+ * and continue generating new ids incrementally from it.
+ */
 object IDManagerSparkService {
 
   type IDType                = Long

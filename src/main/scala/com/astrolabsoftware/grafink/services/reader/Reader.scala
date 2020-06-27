@@ -28,6 +28,9 @@ import com.astrolabsoftware.grafink.models.GrafinkException.NoDataException
 import com.astrolabsoftware.grafink.models.ReaderConfig
 import com.astrolabsoftware.grafink.models.config.Config
 
+/**
+ * Spark data reader
+ */
 object Reader {
 
   type ReaderService = Has[Reader.Service]
