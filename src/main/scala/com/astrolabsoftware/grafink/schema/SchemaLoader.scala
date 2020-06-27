@@ -29,6 +29,12 @@ import com.astrolabsoftware.grafink.common.Utils
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
 import com.astrolabsoftware.grafink.models.config.Config
 
+/**
+ * Responsible for loading the Janusgraph schema to the configured
+ * storage table.
+ * There is a check to skip loading schema in case any vertex labels
+ * are already present.
+ */
 object SchemaLoader {
 
   type SchemaLoaderService = Has[SchemaLoader.Service]
@@ -106,7 +112,7 @@ object SchemaLoader {
           for {
             vertexLabels <- managedMgmt.use(mgmt => ZIO.effect(mgmt.getVertexLabels.asScala.toList.map(_.name)))
             _ <- if (vertexLabels.size == 0) {
-              // We do not have schema
+              // We do not have schema, load the schema
               for {
                 _ <- log.info(s"Starting to load schema")
                 _ <- load(graph, dataSchema)
@@ -126,5 +132,4 @@ object SchemaLoader {
     dataSchema: StructType
   ): ZIO[SchemaLoaderService with Logging, Throwable, Unit] =
     ZIO.accessM(_.get.loadSchema(graph, dataSchema))
-
 }

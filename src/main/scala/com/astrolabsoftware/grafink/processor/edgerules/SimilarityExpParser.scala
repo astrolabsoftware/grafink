@@ -4,18 +4,28 @@ import fastparse._
 import fastparse.NoWhitespace._
 import fastparse.Parsed.{ Failure, Success }
 import org.apache.spark.sql.Column
-import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 
 import com.astrolabsoftware.grafink.models.GrafinkException.BadSimilarityExpression
 
+/**
+ * Parses the similarity expression for computing similarity amongst alerts
+ */
 object SimilarityExpParser {
 
   case class ParseResult(condition: Column, columns: List[String])
 
-  def colNameToCondition(name: String, prefix1: String = "", prefix2: String = ""): Column = {
-    val col1 = s"$prefix1${name}1"
-    val col2 = s"$prefix2${name}2"
+  /**
+   * Given column name from the similarity expression
+   * returns the join condition for that column after appending
+   * 1, 2 to the base name
+   * For eg: rfscore will return (col("rfscore1") > 0.9) && (col(rfscore2) > 0.9)
+   * @param name
+   * @return
+   */
+  def colNameToCondition(name: String): Column = {
+    val col1 = s"${name}1"
+    val col2 = s"${name}2"
     if (fieldToSimilarityCondtitionMap.contains(name)) {
       (fieldToSimilarityCondtitionMap(name)(col(col1), col(col2)))
     } else if (name == "mulens") {
@@ -23,10 +33,10 @@ object SimilarityExpParser {
       val class1 = s"${name}_class_1"
       val class2 = s"${name}_class_2"
       mulensmlCond(
-        col(s"$prefix1${class1}1"),
-        col(s"$prefix1${class2}1"),
-        col(s"$prefix2${class1}2"),
-        col(s"$prefix2${class2}2")
+        col(s"${class1}1"),
+        col(s"${class2}1"),
+        col(s"${class1}2"),
+        col(s"${class2}2")
       )
     } else {
       col(col1) <=> col(col2)
@@ -59,6 +69,10 @@ object SimilarityExpParser {
 
   def parser[_: P]: P[ParseResult] = P(parsechain ~ End)
 
+  /**
+   * A parser implementation using fastparse for parsing similarity expressions like
+   * * (rfscore AND snnscore) OR mulens
+   */
   // TODO: Wrap it over ZIO and handle the failure cases
   def parse(expr: String): ParseResult =
     fastparse.parse(expr, parser(_)) match {
@@ -79,6 +93,9 @@ object SimilarityExpParser {
     (mulens1_class_1, mulens1_class_2, mulens2_class_1, mulens2_class_2) =>
       (mulens1_class_1 === "ML" && mulens1_class_2 === "ML") && (mulens2_class_1 === "ML" && mulens2_class_2 === "ML")
 
+  /**
+   * Map from column base name to similarity condition
+   */
   val fieldToSimilarityCondtitionMap: Map[String, (Column, Column) => Column] = Map(
     "snnscore"  -> scoreCond,
     "rfscore"   -> scoreCond,

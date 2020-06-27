@@ -30,6 +30,9 @@ import com.astrolabsoftware.grafink.models.config.Config
 import com.astrolabsoftware.grafink.processor.EdgeProcessor.{ EdgeStats, MakeEdge }
 import com.astrolabsoftware.grafink.processor.edgerules.VertexClassifierRule
 
+/**
+ * Interface that loads the edges data into JanusGraph
+ */
 object EdgeProcessor {
 
   // TODO Support proper data type for edge properties, and support multiple properties
@@ -43,6 +46,9 @@ object EdgeProcessor {
     def loadEdges(edgesRDD: Dataset[MakeEdge], label: String): ZIO[Logging, Throwable, Unit]
   }
 
+  /**
+   * Get the EdgeProcessLive instance
+   */
   val live: URLayer[Has[JanusGraphConfig] with Logging, EdgeProcessorService] =
     ZLayer.fromEffect(
       for {
@@ -50,6 +56,12 @@ object EdgeProcessor {
       } yield EdgeProcessorLive(janusGraphConfig)
     )
 
+  /**
+   * Given a collection of rules, adds a set of edges per rule to the graph
+   * @param vertexData
+   * @param rules
+   * @return
+   */
   def process(
     vertexData: VertexData,
     rules: List[VertexClassifierRule]
@@ -57,6 +69,10 @@ object EdgeProcessor {
     ZIO.accessM(_.get.process(vertexData, rules))
 }
 
+/**
+ * Loads edge data into JanusGraph
+ * @param config
+ */
 final case class EdgeProcessorLive(config: JanusGraphConfig) extends EdgeProcessor.Service {
 
   override def process(vertexData: VertexData, rules: List[VertexClassifierRule]): ZIO[Logging, Throwable, Unit] =

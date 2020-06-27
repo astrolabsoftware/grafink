@@ -23,12 +23,16 @@ import java.time.temporal.ChronoUnit
 import scala.annotation.tailrec
 
 import org.apache.hadoop.fs.{ FileSystem, Path }
-import org.apache.spark.sql.SparkSession
-import zio.{ RIO, Task, ZIO }
+import zio.{ RIO, ZIO }
 import zio.logging.{ log, Logging }
 
 case class PartitionPath(year: String, month: String, day: String)
 
+/**
+ * Manages the partition path for the data
+ * @param startDate
+ * @param duration
+ */
 case class PartitionManager(startDate: LocalDate, duration: Int) {
 
   import PartitionManager._
@@ -40,6 +44,13 @@ case class PartitionManager(startDate: LocalDate, duration: Int) {
       day = paddedInt(date.getDayOfMonth)
     )
 
+  /**
+   * Given date and duration, generate the list of PartitionPaths to read data from
+   * @param startDate
+   * @param duration
+   * @param p
+   * @return
+   */
   @tailrec
   private def paths(startDate: LocalDate, duration: Int, p: List[PartitionPath]): List[PartitionPath] = {
     if (duration <= 0) return p
@@ -49,6 +60,12 @@ case class PartitionManager(startDate: LocalDate, duration: Int) {
 
   val partitionPaths: List[PartitionPath] = paths(startDate, duration - 1, startDate :: Nil)
 
+  /**
+   * Check if the directory indicated by the path exists on the given filesystem
+   * @param fs
+   * @param path
+   * @return
+   */
   def testDirExist(fs: FileSystem, path: String): ZIO[Logging, Throwable, Boolean] = {
     val p = new Path(path)
     for {
@@ -58,6 +75,12 @@ case class PartitionManager(startDate: LocalDate, duration: Int) {
     } yield result
   }
 
+  /**
+   * Returns the valid partition path strings
+   * @param basePath
+   * @param fs
+   * @return
+   */
   def getValidPartitionPathStrings(basePath: String, fs: FileSystem): ZIO[Logging, Throwable, List[String]] = {
     val validPaths       = partitionPaths
     val validPathStrings = validPaths.map(toPathString(basePath, _))
@@ -88,6 +111,13 @@ object PartitionManager {
 
   def apply(duration: Int): PartitionManager = PartitionManager(LocalDate.now, duration)
 
+  /**
+   * Given the base path and partitionPath object, generates full partition path string
+   * i.e. in the format: /base/year=X/month=Y/day=Z
+   * @param base
+   * @param readPath
+   * @return
+   */
   def toPathString(base: String, readPath: PartitionPath): String =
     partitionColumns
       .zip(List(readPath.year, readPath.month, readPath.day))

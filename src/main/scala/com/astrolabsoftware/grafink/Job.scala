@@ -18,7 +18,7 @@ package com.astrolabsoftware.grafink
 
 import java.time.LocalDate
 
-import org.apache.spark.sql.{ DataFrame, SparkSession }
+import org.apache.spark.sql.DataFrame
 import zio._
 import zio.logging.Logging
 
@@ -34,11 +34,17 @@ import com.astrolabsoftware.grafink.services.IDManagerSparkService.IDManagerSpar
 import com.astrolabsoftware.grafink.services.reader.Reader
 import com.astrolabsoftware.grafink.services.reader.Reader.ReaderService
 
-// The core application
+/**
+ * The core application logic
+ */
 object Job {
 
   case class JobTime(day: LocalDate, duration: Int)
 
+  /**
+   * @param loaded The data already loaded in janusgraph
+   * @param current The data to be loaded for the current run
+   */
   case class VertexData(loaded: DataFrame, current: DataFrame)
 
   type SparkEnv = Has[SparkEnv.Service]
@@ -53,8 +59,8 @@ object Job {
       with Logging
       with ZEnv
 
-  val process: (JobTime, SparkSession) => ZIO[RunEnv, Throwable, Unit] =
-    (jobTime, spark) =>
+  val process: JobTime => ZIO[RunEnv, Throwable, Unit] =
+    jobTime =>
       for {
         janusGraphConfig <- Config.janusGraphConfig
         partitionManager = PartitionManager(jobTime.day, jobTime.duration)
@@ -87,7 +93,7 @@ object Job {
     jobTime =>
       for {
         spark <- ZIO.access[SparkEnv](_.get.sparkEnv)
-        result <- process(jobTime, spark)
+        result <- process(jobTime)
           .ensuring(
             ZIO
               .effect(spark.stop())

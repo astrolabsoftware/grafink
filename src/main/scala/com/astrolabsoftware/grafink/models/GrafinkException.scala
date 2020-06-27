@@ -27,6 +27,11 @@ object GrafinkException {
 
   final case class BadSimilarityExpression(override val error: String) extends GrafinkException(error)
 
+  /**
+   * Get exit code based on the type of exception
+   * @param e
+   * @return
+   */
   def getExitCode(e: GrafinkException): zio.ExitCode = e match {
     case _: BadArgumentsException   => ExitCodes.badArguments
     case _: NoDataException         => ExitCodes.noData

@@ -94,6 +94,66 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
 
         assertM(app.provideLayer(sparkLayer))(hasSameElementsDistinct(List(MakeEdge(2L, 1L, 1))))
       },
+      testM("Similarity classifier will correctly make an edge between new vertices") {
+
+        val similarityConfig =
+          SimilarityConfig(similarityExp = "rfscore OR objectId")
+
+        val similarityClassifer = new SimilarityClassifer(similarityConfig)
+
+        val currentData =
+          List(
+            genAlert(
+              _id = 1L,
+              _objectId = "ZTF19acmbyav",
+              _rfscore = 0.388,
+              _snnscore = 0.36001157760620117,
+              _classtar = 0.0,
+              _roid = 1,
+              _cdsxmatch = WDStar,
+              _mulens_class_1 = MULENS_NULL,
+              _mulens_class_2 = MULENS_NULL
+            ),
+            genAlert(
+              _id = 2L,
+              _objectId = "ZTF19acmbyav",
+              _rfscore = 0.988,
+              _snnscore = 0.67001157760620889,
+              _classtar = 0.0,
+              _roid = 0,
+              _cdsxmatch = Cdsxmatch_UNKNOWN,
+              _mulens_class_1 = MULENS_NULL,
+              _mulens_class_2 = MULENS_NULL
+            )
+          )
+
+        val loadedData =
+          List(
+            genAlert(
+              _id = 3L,
+              _objectId = "ZTF20acmkyap",
+              _rfscore = 0.188,
+              _snnscore = 0.67001157760620889,
+              _classtar = 0.2,
+              _roid = 0,
+              _cdsxmatch = Cdsxmatch_UNKNOWN,
+              _mulens_class_1 = MULENS_NULL,
+              _mulens_class_2 = MULENS_NULL
+            )
+          )
+
+        val app = for {
+          spark <- SparkTestEnv.sparkEnv
+
+        } yield {
+          import spark.implicits._
+          val loadedDf  = loadedData.toDF
+          val currentDf = currentData.toDF
+          similarityClassifer.classify(loadedDf, currentDf).collect.toList
+        }
+
+        assertM(app.provideLayer(sparkLayer))(hasSameElementsDistinct(List(MakeEdge(2L, 1L, 1))))
+      },
       testM("Similarity classifier will correctly calculate similarity") {
 
         val similarityConfig =

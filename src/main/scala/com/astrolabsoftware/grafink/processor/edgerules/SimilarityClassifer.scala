@@ -22,6 +22,10 @@ import org.apache.spark.sql.functions._
 import com.astrolabsoftware.grafink.models.SimilarityConfig
 import com.astrolabsoftware.grafink.processor.EdgeProcessor.MakeEdge
 
+/**
+ * Logic to match `similar` alerts so that we can create edges between them in the graph
+ * @param config
+ */
 class SimilarityClassifer(config: SimilarityConfig) extends VertexClassifierRule {
 
   override def name: String = "similarityClassifier"
@@ -30,7 +34,7 @@ class SimilarityClassifer(config: SimilarityConfig) extends VertexClassifierRule
 
   /**
    * Given a loaded data df (existing data in janusgraph), and current data df, return
-   * an RDD[{@link MakeEdge}]
+   * a Dataset of MakeEdge after applying the logic
    *
    * @param df
    * @return
@@ -40,51 +44,69 @@ class SimilarityClassifer(config: SimilarityConfig) extends VertexClassifierRule
     val similarityExpression = config.similarityExp
     val parsed               = SimilarityExpParser.parse(similarityExpression)
     val joinColumns          = parsed.columns
-    val joinCondition        = parsed.condition
+    // The id greater than condition prevents duplicate rows as a result of cross join
+    val joinCondition        = (col("id1") > col("id2")) && parsed.condition
 
     // TODO: Make this handling of mulens better
+    val selectColsNoIdList: List[String] =
+      joinColumns.flatMap(f => if (f == "mulens") List("mulens_class_1", "mulens_class_2") else List(f))
+
+    val selectColsList: List[String] = "id" :: selectColsNoIdList
+
     @inline
-    def selectCols(num: Int): List[Column] =
-      col("id") :: joinColumns
-        .flatMap(f => if (f == "mulens") List("mulens_class_1", "mulens_class_2") else List(f))
-        .map(x => col(x).as(s"${x}$num"))
+    def selectCols: List[Column] = selectColsList.map(col)
 
-    val df1New = df.select(selectCols(1): _*)
-    val df2Old = loadedDf.select(selectCols(2): _*)
+    @inline
+    def selectColsWithSuffix(num: Int, list: List[String]): List[Column] = list.map(x => col(x).as(s"${x}$num"))
 
-    val joinedOld = df1New.joinWith(df2Old, joinCondition).withColumn("similarity", lit(0L))
-    val encoder   = org.apache.spark.sql.Encoders.product[MakeEdge]
+    @inline
+    def selectColsHavingSuffixAndPrefix(suffix: Int, prefix: String): List[Column] =
+      selectColsList.map(x => col(s"$prefix$x$suffix").as(s"${x}$suffix"))
 
+    val df1New = df.select(selectColsWithSuffix(1, selectColsList): _*)
+    val df2Old =
+      loadedDf
+        .select(selectCols: _*)
+        // Take union with new vertices since we want to create edges within them as well
+        .union(df.select(selectCols: _*))
+        .select(selectColsWithSuffix(2, selectColsList): _*)
+
+    val joined =
+      df1New
+        .joinWith(df2Old, joinCondition)
+        .select(
+          selectColsHavingSuffixAndPrefix(1, "_1.") ++
+            selectColsHavingSuffixAndPrefix(2, "_2."): _*
+        )
+        .withColumn("similarity", lit(0L))
+
+    val encoder = org.apache.spark.sql.Encoders.product[MakeEdge]
+
+    /**
+     * Given the joined dataframe, adds 1 to the similarity column for each
+     * matching join condition, thereby computing `similarity`
+     * @param df
+     * @return
+     */
     @inline
     def computeSimilarity(df: DataFrame): DataFrame =
       joinColumns
         .foldLeft(df)((curr, acc) =>
           curr.withColumn(
             "similarity",
-            when(SimilarityExpParser.colNameToCondition(acc, "_1.", "_2."), col("similarity") + 1)
+            when(SimilarityExpParser.colNameToCondition(acc), col("similarity") + 1)
               .otherwise(col("similarity"))
           )
         )
 
     @inline
     def makeEdge(df: DataFrame): Dataset[MakeEdge] =
-      df.select(col(s"_1.id").as("src"), col("_2.id").as("dst"), col("similarity").as("propVal"))
+      df.select(col(s"id1").as("src"), col("id2").as("dst"), col("similarity").as("propVal"))
         .as(encoder)
 
-    val computeSimOld      = computeSimilarity(joinedOld)
-    val edgesToOldVertices = makeEdge(computeSimOld)
+    val computeSim = computeSimilarity(joined)
 
-    // Edges for new vertices
-    val df2New = df.select(selectCols(2): _*)
-
-    val joinedNew          = df1New.joinWith(df2New, joinCondition).withColumn("similarity", lit(0L))
-    val computeSimNew      = computeSimilarity(joinedNew)
-    val edgesToNewVertices = makeEdge(computeSimNew)
-
-    edgesToOldVertices
-      .union(edgesToNewVertices)
-      // Filter out any loop edges because of self join
-      .filter(r => r.src != r.dst)
+    makeEdge(computeSim)
   }
 }
 

@@ -42,8 +42,14 @@ object IDManagerSparkService {
      * @return
      */
     def readAll(schema: StructType, tableName: String): ZIO[Logging, Throwable, DataFrame]
+
+    /**
+     * Processes the input data for this job to generate and add new ids, then saves this data
+     * @param df
+     * @param tableName
+     * @return
+     */
     def process(df: DataFrame, tableName: String): ZIO[Logging, Throwable, VertexData]
-    def processData(id: IDType, df: DataFrame, tableName: String): ZIO[Logging, Throwable, DataFrame]
     def fetchID(df: DataFrame): RIO[Logging, IDType]
   }
 
@@ -60,13 +66,6 @@ object IDManagerSparkService {
 
   def fetchID(df: DataFrame): RIO[IDManagerSparkService with Logging, IDType] =
     RIO.accessM(_.get.fetchID(df))
-
-  def processData(
-    id: IDType,
-    df: DataFrame,
-    tableName: String
-  ): ZIO[IDManagerSparkService with Logging, Throwable, DataFrame] =
-    RIO.accessM(_.get.processData(id, df, tableName))
 
   def process(df: DataFrame, tableName: String): ZIO[IDManagerSparkService with Logging, Throwable, VertexData] =
     RIO.accessM(_.get.process(df, tableName))
@@ -100,7 +99,7 @@ final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConf
       dfWithId <- processData(lastMax, df, tableName)
     } yield VertexData(loaded = idManagerDf, current = dfWithId)
 
-  override def processData(id: IDType, df: DataFrame, tableName: String): ZIO[Logging, Throwable, DataFrame] = {
+  def processData(id: IDType, df: DataFrame, tableName: String): ZIO[Logging, Throwable, DataFrame] = {
 
     val mode = SaveMode.Append
 
