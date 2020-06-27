@@ -249,3 +249,7 @@ for eg:
 ```
 
 Note that by default grafink runs in ```client``` mode, but this is easily modifiable.
+
+## Benchmarks
+
+Some benchmarks are specified [here](docs/Benchmarks.md)
