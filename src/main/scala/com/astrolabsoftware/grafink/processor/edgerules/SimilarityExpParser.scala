@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 AstroLab Software
+ * Author: Yash Datta
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.astrolabsoftware.grafink.processor.edgerules
 
 import fastparse._
@@ -56,6 +72,12 @@ object SimilarityExpParser {
 
   def expr[_: P]: P[ParseResult] = P(colName | parens)
 
+  /**
+   * Implements a recursive parser chain for "expr OPERATOR expr" , where expr can be any valid
+   * column name or combination of parenthesis, column names and OPERATOR, and OPERATOR can be AND or OR
+   * @return ParseResult containing all the column names in the expression and the join condition based on
+   *         AND or OR operators and the join condition specific to a particular column
+   */
   def parsechain[_: P]: P[ParseResult] = P(expr ~ (ws ~ operator ~ ws ~/ expr).rep).map {
     case (init, seq) =>
       seq.foldLeft(init) {

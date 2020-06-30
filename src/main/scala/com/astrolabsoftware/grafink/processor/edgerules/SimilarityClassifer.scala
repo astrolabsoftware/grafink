@@ -45,7 +45,7 @@ class SimilarityClassifer(config: SimilarityConfig) extends VertexClassifierRule
     val parsed               = SimilarityExpParser.parse(similarityExpression)
     val joinColumns          = parsed.columns
     // The id greater than condition prevents duplicate rows as a result of cross join
-    val joinCondition        = (col("id1") > col("id2")) && parsed.condition
+    val joinCondition = (col("id1") > col("id2")) && parsed.condition
 
     // TODO: Make this handling of mulens better
     val selectColsNoIdList: List[String] =
@@ -78,7 +78,7 @@ class SimilarityClassifer(config: SimilarityConfig) extends VertexClassifierRule
           selectColsHavingSuffixAndPrefix(1, "_1.") ++
             selectColsHavingSuffixAndPrefix(2, "_2."): _*
         )
-        .withColumn("similarity", lit(0L))
+        .withColumn("similarity", lit(0))
 
     val encoder = org.apache.spark.sql.Encoders.product[MakeEdge]
 

@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/astrolabsoftware/grafink.svg?branch=master)](https://travis-ci.org/astrolabsoftware/grafink)
 [![codecov](https://codecov.io/gh/astrolabsoftware/grafink/branch/master/graph/badge.svg?style=platic)](https://codecov.io/gh/astrolabsoftware/grafink)
 
-Grafink is a spark ETL job to load data into Janusgraph.
+Grafink is a spark ETL job to load [Fink](https://fink-broker.org/ data into JanusGraph.
 
 The Architecture is described [here](docs/Architecture.md)
 
@@ -62,7 +62,8 @@ janusgraph {
   // Specifies the schema of the vertices to be loaded
   schema {
     // These columns from data will be converted to vertex properties in the graph
-    vertexPropertyCols = ["rfscore", "snnscore", "mulens_class_1", "mulens_class_2", "cdsxmatch", "roid", "classtar", "objectId"]
+    vertexPropertyCols = ["rfscore", "snnscore", "mulens_class_1", "mulens_class_2",
+      "cdsxmatch", "roid", "objectId"]
     // Currently only one vertex label with label `alert` will be created
     vertexLabel = "alert"
     // List of edge labels and their properties to be created
@@ -71,7 +72,7 @@ janusgraph {
         name = "similarity"
         properties = {
           key = "value"
-          typ = "long"
+          typ = "int"
         }
       }
     ]
@@ -165,7 +166,6 @@ The definition for a 'match' varies per column:
 |snnscore|<code>snnscore1 > 0.9 && snnscore2 > 0.9</code>|
 |cdsxmatch|<code>(cdsxmatch1 =!= "Unknown") && (cdsxmatch1 === cdsxmatch2)</code>|
 |roid|<code>(roid1, roid2) => (roid1 > 1) && (roid2 > 1)</code>|
-|classtar|<code>((classtar1 > 0.9) && (classtar2 > 0.9)) \|\| ((classtar1 < 0.1) && (classtar2 < 0.1))</code>|
 |mulens|<code>(mulens1_class_1 === "ML" && mulens1_class_2 === "ML") && (mulens2_class_1 === "ML" && mulens2_class_2 === "ML")</code>|
 
 Here the column name followed by 1 or 2 specifies the column for the first or the second row being matched.

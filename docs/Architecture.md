@@ -9,8 +9,8 @@ We follow the [algorithm described here](LoadAlgorithm.md#option4)
 The steps to load data are as follows:
 
 1.  Load the schema (from config) by using embedded Janusgraph server on spark driver.
-    This will load the schema data into configured Hbase server. This step is optional
-    and should be made configurable to turn off or on.
+    This will load the schema data into configured Hbase server. This step will execute only when
+    schema does not exist in the storage backend table.
 2.  Query using ```IDManager``` (Get max id from ```IDManager``` data) to get the current offset for Ids.
 3.  Check if intermediate data for the given ```startdate``` exists or not. If it does we jump to step 9. [TODO]
 4.  If intermediate data does not exist we read parquet data for ```startdate```.

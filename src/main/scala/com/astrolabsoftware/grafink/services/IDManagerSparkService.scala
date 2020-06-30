@@ -17,6 +17,7 @@
 package com.astrolabsoftware.grafink.services
 
 import org.apache.spark.sql.{ DataFrame, Row, SaveMode, SparkExtensions, SparkSession }
+import org.apache.spark.sql.functions.{ col, max }
 import org.apache.spark.sql.types.{ LongType, StructField, StructType }
 import zio._
 import zio.logging.{ log, Logging }
@@ -116,7 +117,6 @@ final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConf
       // Cache this df
       dfWithIdCached <- ZIO.effect(dfWithId.cache)
       // Write intermediate data
-      // TODO: Repartition to generate desired number of output files
       _ <- ZIO.effect(
         dfWithIdCached.write
           .format("parquet")
@@ -127,17 +127,14 @@ final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConf
     } yield dfWithIdCached
   }
 
-  override def fetchID(df: DataFrame): RIO[Logging, IDType] = {
+  override def fetchID(df: DataFrame): RIO[Logging, IDType] =
     // Get the highest id from data in IDManagerConfig.SparkPathConfig.dataPath
     // Simplest way is to read whole data and get the max
     // TODO: Modify this to read data from only the latest day's data present in the path
-    import org.apache.spark.sql.functions.{ col, max }
-
     for {
       res <- ZIO.effect(df.select(max(col("id"))).collect)
       currentID = res.headOption.map(r => if (r.isNullAt(0)) 0L else r.getLong(0))
       _ <- if (currentID.isDefined) log.info(s"Returning current max id = ${currentID.get}")
       else ZIO.fail(GetIdException(s"Did not get valid max id"))
     } yield currentID.get
-  }
 }

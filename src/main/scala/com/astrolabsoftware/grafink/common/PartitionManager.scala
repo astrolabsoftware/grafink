@@ -37,6 +37,11 @@ case class PartitionManager(startDate: LocalDate, duration: Int) {
 
   import PartitionManager._
 
+  /**
+   * Given the date, convert into PartitionPath instance
+   * @param date
+   * @return
+   */
   implicit def toPartitionPath(date: LocalDate): PartitionPath =
     PartitionPath(
       year = s"${f"${date.getYear}%02d"}",
@@ -70,8 +75,7 @@ case class PartitionManager(startDate: LocalDate, duration: Int) {
     val p = new Path(path)
     for {
       result <- ZIO.effect(fs.exists(p) && fs.getFileStatus(p).isDirectory)
-      // TODO: Maybe some better way of printing this log?
-      _ <- if (result == false) log.warn(s"Filtering out $path as no such directory exists") else ZIO.succeed(Unit)
+      _      <- if (result == false) log.warn(s"Filtering out $path as no such directory exists") else ZIO.succeed(Unit)
     } yield result
   }
 
@@ -87,6 +91,14 @@ case class PartitionManager(startDate: LocalDate, duration: Int) {
     ZIO.filter(validPathStrings)(testDirExist(fs, _))
   }
 
+  /**
+   * Delete existing partitions for the given startdate and duration at the basePath
+   * This is useful for running in overwrite mode and preserving data of all the other
+   * partitions
+   * @param basePath
+   * @param fs
+   * @return
+   */
   def deletePartitions(basePath: String, fs: FileSystem): ZIO[Logging, Throwable, Unit] =
     for {
       paths <- getValidPartitionPathStrings(basePath, fs)
@@ -103,6 +115,9 @@ case class PartitionManager(startDate: LocalDate, duration: Int) {
 
 }
 
+/**
+ * Helper object to create PartitionManager instance
+ */
 object PartitionManager {
 
   val paddedInt: Int => String       = (i: Int) => s"${f"${i}%02d"}"

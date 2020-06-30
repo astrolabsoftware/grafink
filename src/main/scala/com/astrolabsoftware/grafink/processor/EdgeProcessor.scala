@@ -36,7 +36,7 @@ import com.astrolabsoftware.grafink.processor.edgerules.VertexClassifierRule
 object EdgeProcessor {
 
   // TODO Support proper data type for edge properties, and support multiple properties
-  case class MakeEdge(src: Long, dst: Long, propVal: Long)
+  case class MakeEdge(src: Long, dst: Long, propVal: Int)
   case class EdgeStats(count: Int, partitions: Int)
 
   type EdgeProcessorService = Has[EdgeProcessor.Service]

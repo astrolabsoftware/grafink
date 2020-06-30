@@ -147,12 +147,11 @@ Note that this schema is subject to evolution. The above row will be translated 
     - Star/Galaxy separation ```(i:classtar)```
     - The object ID itself if we use individual alerts ```(i:objectId)```
 
-The ```rfscore``` and ```snnscore``` scores are between 0 and 1. We consider a simple threshold at 0.5.
-First category: 0 <= score <= 0.5
-Second category: 0.5 < score <= 1
+The ```rfscore``` and ```snnscore``` scores are between 0 and 1.
+We consider alerts only where the score is > 0.9
 
-Some classifiers try to distinguish whether an alert is a supernova type ```la``` (```snnscore``` or ```rfscore```).
-Score <= 0.5 would mean ```non-la```. Score > 0.5 would be ```la``` (roughly speaking).
+Some classifiers try to distinguish whether an alert is a supernova type ```Ia``` (```snnscore``` or ```rfscore```).
+Score <= 0.5 would mean ```non-Ia```. Score > 0.5 would be ```Ia``` (roughly speaking).
 
 Each alert has two ids: ```objectId``` and ```candid```.
 ```candid``` is unique per alert.

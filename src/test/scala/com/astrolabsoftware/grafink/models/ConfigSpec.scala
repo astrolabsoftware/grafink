@@ -51,7 +51,7 @@ object ConfigSpec extends DefaultRunnableSpec {
               SchemaConfig(
                 vertexPropertyCols = List("rfscore", "snnscore"),
                 vertexLabel = "type",
-                edgeLabels = List(EdgeLabelConfig("similarity", Map("key" -> "value", "typ" -> "long")))
+                edgeLabels = List(EdgeLabelConfig("similarity", Map("key" -> "value", "typ" -> "int")))
               ),
               VertexLoaderConfig(10),
               EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore OR objectId"))),
