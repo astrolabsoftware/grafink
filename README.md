@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/astrolabsoftware/grafink.svg?branch=master)](https://travis-ci.org/astrolabsoftware/grafink)
 [![codecov](https://codecov.io/gh/astrolabsoftware/grafink/branch/master/graph/badge.svg?style=platic)](https://codecov.io/gh/astrolabsoftware/grafink)
 
-Grafink is a spark ETL job to load [Fink](https://fink-broker.org/ data into JanusGraph.
+Grafink is a spark ETL job to load [Fink](https://fink-broker.org/) data into JanusGraph.
 
 The Architecture is described [here](docs/Architecture.md)
 
