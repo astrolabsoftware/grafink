@@ -20,16 +20,19 @@ lazy val root =
     .settings(
       // Add support for scala version 2.11
       crossScalaVersions := Seq("2.11.11", (ThisBuild / scalaVersion).value),
+      buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
       stdSettings
     )
 
 assemblyJarName in assembly := s"${name.value}-${version.value}.jar"
+mainClass in assembly := Some("com.astrolabsoftware.grafink.Boot")
 
 // https://github.com/circe/circe/issues/713
 // https://stackoverflow.com/questions/43611147/spark-not-working-with-pureconfig
 assemblyShadeRules in assembly := Seq(
   ShadeRule.rename("shapeless.**" -> "shadeshapless.@1").inAll,
-  ShadeRule.rename("io.netty.**" -> "shadenetty.@1").inAll
+  ShadeRule.rename("io.netty.**" -> "shadenetty.@1").inAll,
+  ShadeRule.rename("com.google.common.**" -> "shadedgoogledeps.@1").inAll
 )
 
 assemblyMergeStrategy in assembly := {

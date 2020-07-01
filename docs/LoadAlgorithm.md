@@ -81,6 +81,7 @@ JanusGraph would write, if we used [Option1](#option1)
 
 
 <div id="option3" />
+
 #### Option 3
 
 This takes a hybrid approach between the aforementioned 2 options.
@@ -115,6 +116,7 @@ This takes a hybrid approach between the aforementioned 2 options.
 - Creates another, albeit partial copy of the data (since we do not need to store edges)
 
 <div id="option4" />
+
 #### Option 4
 
 This option builds on the [Option 3](#option3) by using custom ids for adding vertices.
@@ -134,7 +136,7 @@ This means that:
  ```java
  vertexCountBound = (1L << (TOTAL_BITS - partitionBits - USERVERTEX_PADDING_BITWIDTH));
  // here TOTAL_BITS = 64, partitionBits = 16, USERVERTEX_PADDING_BITWIDTH = 3 for Normal Vertex
- // So this evaluates to 17592186044416 ~ 17.5 trillion
+ // So this evaluates to 35184372088832 ~ 35 trillion
  ```
  - Though the latest master of JanusGraph now has [support for custom ids when adding edges](https://github.com/JanusGraph/janusgraph/pull/2118), I think we would not need that feature,
    even if we use embedded JanusGraph instances. This is because, edge id is a combinations of

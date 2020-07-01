@@ -24,9 +24,7 @@ import org.apache.hadoop.hbase.client.{
   Connection,
   ConnectionFactory,
   Get,
-  HBaseAdmin,
   Put,
-  Result,
   TableDescriptor,
   TableDescriptorBuilder
 }
@@ -37,8 +35,10 @@ import zio.logging.{ log, Logging }
 
 import com.astrolabsoftware.grafink.models.{ HBaseConfig, IDManagerConfig }
 import com.astrolabsoftware.grafink.models.config.Config
-import com.astrolabsoftware.grafink.services.IDManager.IDType
 
+/**
+ * Provides HBase client, currently not being used in the job
+ */
 object HBaseClientService {
 
   type HBaseClientService = Has[HBaseClientService.Service]

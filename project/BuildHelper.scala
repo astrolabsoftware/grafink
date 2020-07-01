@@ -22,10 +22,12 @@ object BuildHelper {
 
   val zioVersion = "1.0.0-RC20"
   val pureConfigVersion = "0.12.3"
+  val fastParseVersion = "2.1.0"
   val zioLoggingVersion = "0.3.0"
   val sparkVersion = "2.4.4"
   val scoptVersion = "3.7.1"
   val hbaseVersion = "2.0.5"
+  val janusGraphVersion = "0.5.1"
 
   val scalaTestVersion = "3.1.0"
   val logbackVersion = "1.2.3"
@@ -35,7 +37,7 @@ object BuildHelper {
     libraryDependencies ++= Seq(
       "org.scalatest"   %% "scalatest" % scalaTestVersion % Test,
       "dev.zio" %% "zio-test" % zioVersion % Test,
-      "dev.zio" %% "zio-test-sbt" % zioVersion % Test,
+      "dev.zio" %% "zio-test-sbt" % zioVersion % Test
     ),
     testFrameworks := Seq(new TestFramework("zio.test.sbt.ZTestFramework")),
     // Do not execute test in parallel
@@ -62,18 +64,25 @@ object BuildHelper {
       Seq(
         "com.github.scopt" %% "scopt" % scoptVersion,
         "com.github.pureconfig" %% "pureconfig" % pureConfigVersion,
+        "com.lihaoyi" %% "fastparse" % fastParseVersion,
         "dev.zio" %% "zio" % zioVersion,
         "dev.zio" %% "zio-logging-slf4j" % zioLoggingVersion,
         "org.apache.hbase" % "hbase-client" % hbaseVersion excludeAll(
           ExclusionRule(organization = "junit"),
-          ExclusionRule(organization = "org.slf4j")
+          ExclusionRule(organization = "org.slf4j"),
+          ExclusionRule(organization = "com.fasterxml.jackson.core")
         ),
         "org.apache.hbase" % "hbase-common" % hbaseVersion excludeAll(
           ExclusionRule(organization = "junit"),
-          ExclusionRule(organization = "org.slf4j")
+          ExclusionRule(organization = "org.slf4j"),
+          ExclusionRule(organization = "com.fasterxml.jackson.core")
         ),
         "org.apache.spark" %% "spark-core" % sparkVersion,
-        "org.apache.spark" %% "spark-sql" % sparkVersion
+        "org.apache.spark" %% "spark-sql" % sparkVersion,
+        "org.janusgraph" % "janusgraph-core" % janusGraphVersion,
+        "org.janusgraph" % "janusgraph-hbase" % janusGraphVersion,
+        "org.janusgraph" % "janusgraph-inmemory" % janusGraphVersion
       )
+
   ) ++ basicSettings
 }

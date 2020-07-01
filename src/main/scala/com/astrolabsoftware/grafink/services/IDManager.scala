@@ -19,11 +19,12 @@ package com.astrolabsoftware.grafink.services
 import zio._
 import zio.logging.Logging
 
-import com.astrolabsoftware.grafink.CLParser
-import com.astrolabsoftware.grafink.Job.JobTime
+import com.astrolabsoftware.grafink.Job.{ JobTime, SparkEnv }
+import com.astrolabsoftware.grafink.common.PartitionManager
 import com.astrolabsoftware.grafink.hbase.HBaseClientService
 import com.astrolabsoftware.grafink.hbase.HBaseClientService.HBaseClientService
-import com.astrolabsoftware.grafink.models.IDManagerConfig
+import com.astrolabsoftware.grafink.models.{ IDManagerConfig, JanusGraphConfig }
+import com.astrolabsoftware.grafink.models.GrafinkException.GetIdException
 import com.astrolabsoftware.grafink.models.config.Config
 import com.astrolabsoftware.grafink.services.IDManager.IDType
 
@@ -33,33 +34,39 @@ object IDManager {
   type IDManagerService = Has[IDManager.Service]
 
   trait Service {
-    def config: IDManagerConfig
-    def fetchID(jobTime: JobTime): RIO[Logging, Option[IDType]]
+    def fetchID(jobTime: JobTime): RIO[Logging, IDType]
   }
 
-  val live: URLayer[Logging with HBaseClientService with Has[IDManagerConfig], IDManagerService] =
+  val liveUHbase
+    : URLayer[Logging with HBaseClientService with Has[JanusGraphConfig] with Has[IDManagerConfig], IDManagerService] =
     ZLayer.fromEffect(
       for {
-        client <- ZIO.service[HBaseClientService.Service]
-        config <- Config.idManagerConfig
-      } yield new IDManagerServiceLive(client, config)
+        client      <- ZIO.service[HBaseClientService.Service]
+        janusConfig <- Config.janusGraphConfig
+        idConfig    <- Config.idManagerConfig
+      } yield new IDManagerHBaseService(client, idConfig, janusConfig)
     )
 
-  def makeIdKey(day: String, tableName: String): String = s"$day-$tableName"
-  def fetchID(jobTime: JobTime): RIO[IDManagerService with Logging, Option[IDType]] =
+  def fetchID(jobTime: JobTime): RIO[IDManagerService with Logging, IDType] =
     RIO.accessM(_.get.fetchID(jobTime))
 }
 
-final class IDManagerServiceLive(client: HBaseClientService.Service, _config: IDManagerConfig)
-    extends IDManager.Service {
+final class IDManagerHBaseService(
+  client: HBaseClientService.Service,
+  idConfig: IDManagerConfig,
+  janusConfig: JanusGraphConfig
+) extends IDManager.Service {
 
-  override val config: IDManagerConfig = _config
-
-  override def fetchID(jobTime: JobTime): RIO[Logging, Option[IDType]] = {
-    val key = IDManager.makeIdKey(s"${jobTime.day.format(CLParser.dateFormat)}", config.tableName)
+  override def fetchID(jobTime: JobTime): RIO[Logging, IDType] = {
+    val key = makeIdKey(s"${jobTime.day.format(PartitionManager.dateFormat)}", janusConfig.storage.tableName)
     for {
-      res <- client.getFromTable(key, config.cf, config.qualifier, config.tableName)
-      id = res.map(_.toLong)
+      res <- client.getFromTable(key, idConfig.hbase.cf, idConfig.hbase.qualifier, idConfig.hbase.tableName)
+      _ = if (res.isEmpty) {
+        ZIO.fail(GetIdException(s"Error getting validId from hbase table ${idConfig.hbase.tableName}"))
+      }
+      id = res.get.toLong
     } yield id
   }
+
+  def makeIdKey(day: String, tableName: String): String = s"$day-$tableName"
 }

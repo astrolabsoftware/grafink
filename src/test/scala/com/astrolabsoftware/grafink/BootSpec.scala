@@ -5,7 +5,7 @@ import java.time.LocalDate
 import zio.test._
 import zio.test.Assertion._
 
-import com.astrolabsoftware.grafink.CLParser.dateFormat
+import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.models.ExitCodes
 
 object BootSpec extends DefaultRunnableSpec {

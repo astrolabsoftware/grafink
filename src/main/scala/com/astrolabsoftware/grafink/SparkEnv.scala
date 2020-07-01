@@ -40,7 +40,7 @@ object SparkEnv {
 
   def local(): ZLayer[Blocking, Throwable, Has[Service]] =
     make {
-      SparkSession.builder().appName(BuildInfo.name).master("local").getOrCreate()
+      SparkSession.builder().appName(BuildInfo.name).master("local[*]").getOrCreate()
     }
 
   def cluster(): ZLayer[Blocking, Throwable, Has[Service]] =

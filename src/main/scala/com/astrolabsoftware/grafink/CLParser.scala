@@ -17,12 +17,13 @@
 package com.astrolabsoftware.grafink
 
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 import scala.util.Try
 
 import buildinfo.BuildInfo
 import scopt.OptionParser
+
+import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 
 final case class ArgsConfig(confFile: String, startDate: LocalDate, duration: Int)
 
@@ -76,6 +77,5 @@ trait CLParser {
 
 object CLParser {
 
-  val dateFormat: DateTimeFormatter         = DateTimeFormatter.ofPattern("yyyy-MM-dd")
   def getLocalDate(date: String): LocalDate = LocalDate.parse(date, dateFormat)
 }

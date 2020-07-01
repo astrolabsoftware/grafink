@@ -147,6 +147,19 @@ Note that this schema is subject to evolution. The above row will be translated 
     - Star/Galaxy separation ```(i:classtar)```
     - The object ID itself if we use individual alerts ```(i:objectId)```
 
+The ```rfscore``` and ```snnscore``` scores are between 0 and 1.
+We consider alerts only where the score is > 0.9
+
+Some classifiers try to distinguish whether an alert is a supernova type ```Ia``` (```snnscore``` or ```rfscore```).
+Score <= 0.5 would mean ```non-Ia```. Score > 0.5 would be ```Ia``` (roughly speaking).
+
+Each alert has two ids: ```objectId``` and ```candid```.
+```candid``` is unique per alert.
+```objectId``` is shared among alerts that point to the same astrophysical objects.
+Say, if a supernova is observed at two different times ```t1```  and ```t2```,
+the alerts emitted would have the same ```objectId```,
+but different times (```jd``` ) and different ```candid```.
+
 ### Edges
 - Create an edge between all the vertices that have same ```link``` properties.
 - Definition of 'same' property will vary, and will be controlled by some rules, for eg:
