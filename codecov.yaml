@@ -1,0 +1,12 @@
+coverage:
+   precision: 0
+   status:
+     project:
+       default:
+         # request at least 1% change to trigger a failure
+         threshold: 1.0%
+     # pull-requests
+     patch:
+       default:
+         # request at least 1% change to trigger a failure
+         threshold: 1.0%

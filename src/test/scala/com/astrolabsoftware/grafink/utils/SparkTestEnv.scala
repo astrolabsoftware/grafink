@@ -1,10 +1,10 @@
 package com.astrolabsoftware.grafink.utils
 
-import buildinfo.BuildInfo
 import org.apache.spark.sql.SparkSession
 import zio.{ Has, ZIO, ZLayer, ZManaged }
 import zio.blocking.Blocking
 
+import com.astrolabsoftware.grafink.BuildInfo
 import com.astrolabsoftware.grafink.Job.SparkEnv
 import com.astrolabsoftware.grafink.SparkEnv.{ make, Service }
 

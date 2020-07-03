@@ -16,7 +16,6 @@
  */
 package com.astrolabsoftware.grafink
 
-import buildinfo.BuildInfo
 import org.apache.spark.sql.SparkSession
 import zio.{ Has, ZLayer }
 import zio.blocking.Blocking

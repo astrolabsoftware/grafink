@@ -2,7 +2,7 @@
 [![Build Status](https://travis-ci.org/astrolabsoftware/grafink.svg?branch=master)](https://travis-ci.org/astrolabsoftware/grafink)
 [![codecov](https://codecov.io/gh/astrolabsoftware/grafink/branch/master/graph/badge.svg?style=platic)](https://codecov.io/gh/astrolabsoftware/grafink)
 
-Grafink is a spark ETL job to load [Fink](https://fink-broker.org/) data into JanusGraph.
+Grafink is a spark ETL job to bulk load data into JanusGraph. It was created to load [Fink](https://fink-broker.org/) data into JanusGraph.
 
 The Architecture is described [here](docs/Architecture.md)
 
@@ -214,7 +214,7 @@ The above creates a deployable zip file `grafink-<version>.zip`. The contents of
 
   - conf/application.conf  // Modify this config file according to the job requirements.
   - grafink assembly jar   // The main executable jar for running spark job.
-  - bin/start.sh           // The main executable script that user can invoke to start the job.
+  - bin/grafink            // The main executable script that user can invoke to start the job.
 
 For compiling and packaging against scala 2.11:
 
@@ -227,7 +227,7 @@ sbt ++2.11.11 dist
 To run locally
 
 ```
-./bin/start.sh --config conf/application.conf --startdate <yyyy-MM-dd> --duration 1 --num-executors 2 --driver-memory 2g --executor-memory 2g
+./bin/grafink --config conf/application.conf --startdate <yyyy-MM-dd> --duration 1 --num-executors 2 --driver-memory 2g --executor-memory 2g
 ```
 
 To run over Mesos cluster
@@ -239,13 +239,13 @@ export SPARK_MASTER="mesos://<host>:<port>"
 Then run
 
 ```
-./bin/start.sh --config conf/application.conf --startdate <YYYY-mm-dd> --duration <# of days> --driver-memory 2g --executor-memory 3g --conf spark.mesos.principal=<principal> --conf spark.mesos.secret=<secret> --conf spark.mesos.role=<role> --conf spark.cores.max=100 --conf spark.executor.cores=2
+./bin/grafink --config conf/application.conf --startdate <YYYY-mm-dd> --duration <# of days> --driver-memory 2g --executor-memory 3g --conf spark.mesos.principal=<principal> --conf spark.mesos.secret=<secret> --conf spark.mesos.role=<role> --conf spark.cores.max=100 --conf spark.executor.cores=2
 ```
 
 for eg:
 
 ```
-./bin/start.sh --config conf/application.conf --startdate 2019-11-01 --duration 1 --driver-memory 2g --executor-memory 3g --conf spark.mesos.principal=lsst --conf spark.mesos.secret=secret --conf spark.mesos.role=lsst --conf spark.cores.max=100 --conf spark.executor.cores=2
+./bin/grafink --config conf/application.conf --startdate 2019-11-01 --duration 1 --driver-memory 2g --executor-memory 3g --conf spark.mesos.principal=lsst --conf spark.mesos.secret=secret --conf spark.mesos.role=lsst --conf spark.cores.max=100 --conf spark.executor.cores=2
 ```
 
 Note that by default grafink runs in ```client``` mode, but this is easily modifiable.
