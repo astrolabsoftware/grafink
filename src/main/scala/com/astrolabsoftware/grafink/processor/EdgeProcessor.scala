@@ -16,8 +16,9 @@
  */
 package com.astrolabsoftware.grafink.processor
 
+import com.github.mrpowers.spark.daria.sql.DataFrameHelpers._
 import org.apache.spark.HashPartitioner
-import org.apache.spark.sql.{ Dataset, SparkSession }
+import org.apache.spark.sql.{ DataFrame, Row }
 import org.janusgraph.core.JanusGraph
 import org.janusgraph.graphdb.database.StandardJanusGraph
 import zio._
@@ -27,7 +28,7 @@ import com.astrolabsoftware.grafink.JanusGraphEnv.withGraph
 import com.astrolabsoftware.grafink.Job.{ SparkEnv, VertexData }
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
 import com.astrolabsoftware.grafink.models.config.Config
-import com.astrolabsoftware.grafink.processor.EdgeProcessor.{ EdgeStats, MakeEdge }
+import com.astrolabsoftware.grafink.processor.EdgeProcessor.{ EdgeColumns, EdgeStats }
 import com.astrolabsoftware.grafink.processor.edgerules.VertexClassifierRule
 
 /**
@@ -35,15 +36,20 @@ import com.astrolabsoftware.grafink.processor.edgerules.VertexClassifierRule
  */
 object EdgeProcessor {
 
-  // TODO Support proper data type for edge properties, and support multiple properties
-  case class MakeEdge(src: Long, dst: Long, propVal: Int)
   case class EdgeStats(count: Int, partitions: Int)
+
+  object EdgeColumns {
+    val SRCVERTEXFIELD   = "src"
+    val DSTVERTEXFIELD   = "dst"
+    val PROPERTYVALFIELD = "propVal"
+  }
+  val requiredEdgeColumns = Seq(EdgeColumns.SRCVERTEXFIELD, EdgeColumns.DSTVERTEXFIELD, EdgeColumns.PROPERTYVALFIELD)
 
   type EdgeProcessorService = Has[EdgeProcessor.Service]
 
   trait Service {
     def process(vertexData: VertexData, rules: List[VertexClassifierRule]): ZIO[Logging, Throwable, Unit]
-    def loadEdges(edgesRDD: Dataset[MakeEdge], label: String): ZIO[Logging, Throwable, Unit]
+    def loadEdges(edgesRDD: DataFrame, label: String, edgePropKey: String): ZIO[Logging, Throwable, Unit]
   }
 
   /**
@@ -80,7 +86,13 @@ final case class EdgeProcessorLive(config: JanusGraphConfig) extends EdgeProcess
       _ <- ZIO.collectAll(rules.map { rule =>
         for {
           _ <- log.info(s"Adding edges using rule ${rule.name}")
-          _ <- loadEdges(rule.classify(vertexData.loaded, vertexData.current), rule.getEdgeLabel)
+          edges = rule.classify(vertexData.loaded, vertexData.current)
+          // Make sure the edges from the rule have the required mandatory columns
+          // This is unfortunate result of lack of variant types in Datasets and also
+          // lack of custom encoder creation capability for spark Datasets
+          // https://issues.apache.org/jira/browse/SPARK-22351
+          _ <- ZIO.effect(validatePresenceOfColumns(edges, EdgeProcessor.requiredEdgeColumns))
+          _ <- loadEdges(edges, rule.getEdgeLabel, rule.getEdgePropertyKey)
         } yield ()
       })
     } yield ()
@@ -89,7 +101,8 @@ final case class EdgeProcessorLive(config: JanusGraphConfig) extends EdgeProcess
     config: JanusGraphConfig,
     graph: JanusGraph,
     label: String,
-    partition: Iterator[MakeEdge]
+    propertyKey: String,
+    partition: Iterator[Row]
   ): ZIO[Any, Throwable, Unit] = {
     val batchSize = config.edgeLoader.batchSize
     val g         = graph.traversal()
@@ -100,16 +113,25 @@ final case class EdgeProcessorLive(config: JanusGraphConfig) extends EdgeProcess
         _ <- ZIO.collectAll_(
           group.map {
             r =>
+              val propertyVal = r.getAs[AnyVal](EdgeColumns.PROPERTYVALFIELD)
+
               // TODO: Optimize
               for {
-                // Safe to get here since we know its already loaded
-                srcVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.src))))
-                dstVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.dst))))
-                _         <- ZIO.effect(srcVertex.addE(label).to(dstVertex).property("value", r.propVal).iterate)
+                srcVertex <- ZIO.effect(
+                  g.V(java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long](EdgeColumns.SRCVERTEXFIELD))))
+                )
+                dstVertex <- ZIO.effect(
+                  g.V(java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long](EdgeColumns.DSTVERTEXFIELD))))
+                )
+                _ <- ZIO.effect(srcVertex.addE(label).to(dstVertex).property(propertyKey, propertyVal).iterate)
                 // Add reverse edge as well
-                srcVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.src))))
-                dstVertex <- ZIO.effect(g.V(java.lang.Long.valueOf(idManager.toVertexId(r.dst))))
-                _         <- ZIO.effect(dstVertex.addE(label).to(srcVertex).property("value", r.propVal).iterate)
+                srcVertex <- ZIO.effect(
+                  g.V(java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long](EdgeColumns.SRCVERTEXFIELD))))
+                )
+                dstVertex <- ZIO.effect(
+                  g.V(java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long](EdgeColumns.DSTVERTEXFIELD))))
+                )
+                _ <- ZIO.effect(dstVertex.addE(label).to(srcVertex).property(propertyKey, propertyVal).iterate)
               } yield ()
           }
         )
@@ -134,14 +156,14 @@ final case class EdgeProcessorLive(config: JanusGraphConfig) extends EdgeProcess
     EdgeStats(count = numberOfEdgesToLoad, numPartitions)
   }
 
-  override def loadEdges(edges: Dataset[MakeEdge], label: String): ZIO[Logging, Throwable, Unit] = {
+  override def loadEdges(edges: DataFrame, label: String, propertyKey: String): ZIO[Logging, Throwable, Unit] = {
 
     val c       = config
     val jobFunc = job _
 
     // Add edges to all rows within a partition
-    def loadFunc: (Iterator[MakeEdge]) => Unit = (partition: Iterator[MakeEdge]) => {
-      val executorJob = withGraph(c, graph => jobFunc(c, graph, label, partition))
+    def loadFunc: (Iterator[Row]) => Unit = (partition: Iterator[Row]) => {
+      val executorJob = withGraph(c, graph => jobFunc(c, graph, label, propertyKey, partition))
       zio.Runtime.default.unsafeRun(executorJob)
     }
 
@@ -155,7 +177,13 @@ final case class EdgeProcessorLive(config: JanusGraphConfig) extends EdgeProcess
       _ <- ZIO
         .effect(
           edges.sparkSession.sparkContext
-            .runJob(edges.rdd.keyBy(_.src).partitionBy(new HashPartitioner(stats.partitions)).values, load)
+            .runJob(
+              edges.rdd
+                .keyBy(r => r.getAs[Long](EdgeColumns.SRCVERTEXFIELD))
+                .partitionBy(new HashPartitioner(stats.partitions))
+                .values,
+              load
+            )
         )
         .fold(
           f => log.error(s"Error while loading edges $f"),

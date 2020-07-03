@@ -18,20 +18,22 @@ package com.astrolabsoftware.grafink.processor.edgerules
 
 import org.apache.spark.sql.{ DataFrame, Dataset }
 
-import com.astrolabsoftware.grafink.processor.EdgeProcessor.MakeEdge
-
 trait VertexClassifierRule {
 
   def name: String
 
   /**
    * Given data already existing in graph (loadedDf) and the new data to ingest (df)
-   * Return a Dataset of {@link MakeEdge}. In all the rows of the returned RDD, src id
+   * Return a DataFrame of Edge rows. In all the rows of the returned DataFrame, src id
    * must always be of the new data to ingest (df).
+   * The contract mandates the returned DataFrame to have the requiredEdgeColumns as defined
+   * in the EdgeProcessor.
    * @param df
    * @return DataFrame
    */
-  def classify(loadedDf: DataFrame, df: DataFrame): Dataset[MakeEdge]
+  def classify(loadedDf: DataFrame, df: DataFrame): DataFrame
 
   def getEdgeLabel: String
+
+  def getEdgePropertyKey: String
 }

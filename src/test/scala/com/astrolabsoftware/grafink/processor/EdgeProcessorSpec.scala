@@ -4,6 +4,9 @@ import java.time.LocalDate
 
 import scala.collection.JavaConverters._
 
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
+import org.apache.spark.sql.types.{ IntegerType, LongType, StructField, StructType }
 import org.apache.tinkerpop.gremlin.structure.Direction
 import zio.{ ZIO, ZLayer }
 import zio.test.{ DefaultRunnableSpec, _ }
@@ -15,7 +18,7 @@ import com.astrolabsoftware.grafink.common.PartitionManager
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models._
-import com.astrolabsoftware.grafink.processor.EdgeProcessor.MakeEdge
+import com.astrolabsoftware.grafink.processor.EdgeProcessor.EdgeColumns._
 import com.astrolabsoftware.grafink.services.IDManagerSparkService
 import com.astrolabsoftware.grafink.services.IDManagerSparkService.IDManagerSparkService
 import com.astrolabsoftware.grafink.services.reader.Reader
@@ -53,6 +56,7 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
       val path             = getClass.getResource(dataPath).getPath
       val logger           = Logger.test
       val edgeLabel        = "similarity"
+      val edgePropertyKey  = "value"
       val similarityConfig = SimilarityConfig("(rfscore AND snnscore) OR objectId")
 
       val readerConfig =
@@ -81,6 +85,14 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
       val idManagerConfig =
         ZLayer.succeed(IDManagerConfig(SparkPathConfig(tempDir.getAbsolutePath), HBaseColumnConfig("", "", "")))
 
+      val edgeSchema = StructType(
+        fields = Array(
+          StructField(SRCVERTEXFIELD, LongType, false),
+          StructField(DSTVERTEXFIELD, LongType, false),
+          StructField(PROPERTYVALFIELD, IntegerType, false)
+        )
+      )
+
       val app = for {
         output <- JanusGraphTestEnv
           .test(janusConfig)
@@ -95,8 +107,12 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
                 .getDataTypeForVertexProperties(janusConfig.schema.vertexPropertyCols, df)
               vertexDataCurrent <- ZIO.effect(vertexData.current.collect.toIterator)
               _                 <- vertexProcessorLive.job(janusConfig, graph, dataTypeForVertexPropertyCols, vertexDataCurrent)
-              edges = List(MakeEdge(1L, 2L, 1), MakeEdge(2L, 3L, 5), MakeEdge(2L, 4L, 3)).toIterator
-              _ <- edgeProcessorLive.job(janusConfig, graph, edgeLabel, edges)
+              edges = List(
+                new GenericRowWithSchema(Array(1L, 2L, 1), edgeSchema),
+                new GenericRowWithSchema(Array(2L, 3L, 5), edgeSchema),
+                new GenericRowWithSchema(Array(2L, 4L, 3), edgeSchema)
+              ).toIterator
+              _ <- edgeProcessorLive.job(janusConfig, graph, edgeLabel, edgePropertyKey, edges)
               g = graph.traversal()
             } yield {
               // Get vertices associated with edge similarity = 5,
