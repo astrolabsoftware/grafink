@@ -1,6 +1,5 @@
 package com.astrolabsoftware.grafink
 
-import buildinfo.BuildInfo
 import zio.ZIO
 import zio.test._
 import zio.test.Assertion._

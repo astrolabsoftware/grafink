@@ -21,6 +21,7 @@ lazy val root =
       // Add support for scala version 2.11
       crossScalaVersions := Seq("2.11.11", (ThisBuild / scalaVersion).value),
       buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+      buildInfoPackage := "com.astrolabsoftware.grafink",
       stdSettings
     )
 
@@ -66,7 +67,7 @@ mappings in Universal ++= {
 scriptClasspath := Seq((assemblyJarName in assembly).value)
 // name of start script
 bashScriptConfigLocation := Some("")
-executableScriptName := "start.sh"
+executableScriptName := "grafink"
 // do not create bat script
 makeBatScripts := Seq()
 

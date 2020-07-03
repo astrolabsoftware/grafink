@@ -20,7 +20,6 @@ import java.time.LocalDate
 
 import scala.util.Try
 
-import buildinfo.BuildInfo
 import scopt.OptionParser
 
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
