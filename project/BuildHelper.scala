@@ -25,6 +25,7 @@ object BuildHelper {
   val fastParseVersion = "2.1.0"
   val zioLoggingVersion = "0.3.0"
   val sparkVersion = "2.4.4"
+  val sparkDariaVersion = "v0.35.0"
   val scoptVersion = "3.7.1"
   val hbaseVersion = "2.0.5"
   val janusGraphVersion = "0.5.1"
@@ -54,7 +55,9 @@ object BuildHelper {
 
   lazy val basicSettings = Seq(
     resolvers ++= Seq(
-      "central" at "https://repo1.maven.org/maven2/"
+      "central" at "https://repo1.maven.org/maven2/",
+      // For spark daria
+      "jitpack" at "https://jitpack.io"
     )
   ) ++ testSettings
 
@@ -79,6 +82,7 @@ object BuildHelper {
         ),
         "org.apache.spark" %% "spark-core" % sparkVersion,
         "org.apache.spark" %% "spark-sql" % sparkVersion,
+        "com.github.mrpowers" % "spark-daria" % sparkDariaVersion,
         "org.janusgraph" % "janusgraph-core" % janusGraphVersion,
         "org.janusgraph" % "janusgraph-hbase" % janusGraphVersion,
         "org.janusgraph" % "janusgraph-inmemory" % janusGraphVersion

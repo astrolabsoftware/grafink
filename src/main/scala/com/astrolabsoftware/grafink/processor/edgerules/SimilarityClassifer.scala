@@ -16,11 +16,11 @@
  */
 package com.astrolabsoftware.grafink.processor.edgerules
 
-import org.apache.spark.sql.{ Column, DataFrame, Dataset }
+import org.apache.spark.sql.{ Column, DataFrame }
 import org.apache.spark.sql.functions._
 
 import com.astrolabsoftware.grafink.models.SimilarityConfig
-import com.astrolabsoftware.grafink.processor.EdgeProcessor.MakeEdge
+import com.astrolabsoftware.grafink.processor.EdgeProcessor.EdgeColumns._
 
 /**
  * Logic to match `similar` alerts so that we can create edges between them in the graph
@@ -32,14 +32,16 @@ class SimilarityClassifer(config: SimilarityConfig) extends VertexClassifierRule
 
   override def getEdgeLabel: String = "similarity"
 
+  override def getEdgePropertyKey: String = "value"
+
   /**
    * Given a loaded data df (existing data in janusgraph), and current data df, return
-   * a Dataset of MakeEdge after applying the logic
+   * a DataFrame containing the edges after applying the logic
    *
    * @param df
    * @return
    */
-  override def classify(loadedDf: DataFrame, df: DataFrame): Dataset[MakeEdge] = {
+  override def classify(loadedDf: DataFrame, df: DataFrame): DataFrame = {
 
     val similarityExpression = config.similarityExp
     val parsed               = SimilarityExpParser.parse(similarityExpression)
@@ -80,8 +82,6 @@ class SimilarityClassifer(config: SimilarityConfig) extends VertexClassifierRule
         )
         .withColumn("similarity", lit(0))
 
-    val encoder = org.apache.spark.sql.Encoders.product[MakeEdge]
-
     /**
      * Given the joined dataframe, adds 1 to the similarity column for each
      * matching join condition, thereby computing `similarity`
@@ -100,9 +100,8 @@ class SimilarityClassifer(config: SimilarityConfig) extends VertexClassifierRule
         )
 
     @inline
-    def makeEdge(df: DataFrame): Dataset[MakeEdge] =
-      df.select(col(s"id1").as("src"), col("id2").as("dst"), col("similarity").as("propVal"))
-        .as(encoder)
+    def makeEdge(df: DataFrame): DataFrame =
+      df.select(col(s"id1").as(SRCVERTEXFIELD), col("id2").as(DSTVERTEXFIELD), col("similarity").as(PROPERTYVALFIELD))
 
     val computeSim = computeSimilarity(joined)
 

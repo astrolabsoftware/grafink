@@ -58,3 +58,24 @@ JobId in history server: 594f9a37-08ab-4400-a8fa-e9990dc90d3b-0225
 |---------------|------------|------------------------|----------------------|--------------------|----------------|----------------|-------------------|
 |107619|128480018|100|500|12 s|47 min|55 min|1 failure in edgeLoader, 6 failures in counting edges|
 
+### 4
+
+Environment details
+
+HBase
+Similarity value Dataype Int
+But we use DataFrame instead of Dataset[EdgeClass]
+Spark cluster running over mesos
+
+| # of executors | Executor memory | Executor cores | Driver memory |
+|----------------|-----------------|----------------|---------------|
+|50|2g|2|2g
+
+Run details
+
+JobId in history server: 594f9a37-08ab-4400-a8fa-e9990dc90d3b-0302
+
+| # of vertices | # of edges | vertexLoader batchsize | edgeLoader batchsize |  Vertex load time  | Edge load time | Total Job time | # of tasks failed |
+|---------------|------------|------------------------|----------------------|--------------------|----------------|----------------|-------------------|
+|107619|128480018|100|500|10 s|47 min|56 min|0|
+

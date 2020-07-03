@@ -1,10 +1,10 @@
 package com.astrolabsoftware.grafink.processor.edgerules
 
+import org.apache.spark.sql.Row
 import zio.test._
 import zio.test.Assertion.hasSameElementsDistinct
 
 import com.astrolabsoftware.grafink.models._
-import com.astrolabsoftware.grafink.processor.EdgeProcessor.MakeEdge
 import com.astrolabsoftware.grafink.utils.SparkTestEnv
 
 object SimilarityClassifierSpec extends DefaultRunnableSpec {
@@ -92,7 +92,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
           similarityClassifer.classify(loadedDf, currentDf).collect.toList
         }
 
-        assertM(app.provideLayer(sparkLayer))(hasSameElementsDistinct(List(MakeEdge(2L, 1L, 1))))
+        assertM(app.provideLayer(sparkLayer))(hasSameElementsDistinct(List(Row(2L, 1L, 1))))
       },
       testM("Similarity classifier will correctly make an edge between new vertices") {
 
@@ -152,7 +152,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
           similarityClassifer.classify(loadedDf, currentDf).collect.toList
         }
 
-        assertM(app.provideLayer(sparkLayer))(hasSameElementsDistinct(List(MakeEdge(2L, 1L, 1))))
+        assertM(app.provideLayer(sparkLayer))(hasSameElementsDistinct(List(Row(2L, 1L, 1))))
       },
       testM("Similarity classifier will correctly calculate similarity") {
 
@@ -203,7 +203,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
           similarityClassifer.classify(loadedDf, currentDf).collect.toList
         }
 
-        assertM(app.provideLayer(sparkLayer))(hasSameElementsDistinct(List(MakeEdge(2L, 1L, 5))))
+        assertM(app.provideLayer(sparkLayer))(hasSameElementsDistinct(List(Row(2L, 1L, 5))))
       }
     )
 }
