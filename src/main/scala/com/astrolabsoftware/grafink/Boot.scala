@@ -69,18 +69,18 @@ object Boot extends App {
         val vertexProcessorLayer = logger ++ configLayer >>> VertexProcessor.live
         val edgeProcessorLayer   = logger ++ configLayer >>> EdgeProcessor.live
 
-        Job
-          .runGrafinkJob(JobTime(argsConfig.startDate, argsConfig.duration))
-          .provideCustomLayer(
-            SparkEnv.cluster ++
-              configLayer ++
-              schemaLoaderLayer ++
-              readerLayer ++
-              idManagerLayer ++
-              vertexProcessorLayer ++
-              edgeProcessorLayer ++
-              logger
-          )
+        val jobTime = JobTime(argsConfig.startDate, argsConfig.duration)
+        val job     = if (argsConfig.deleteMode) Job.runGrafinkDeleteJob(jobTime) else Job.runGrafinkJob(jobTime)
+        job.provideCustomLayer(
+          SparkEnv.cluster ++
+            configLayer ++
+            schemaLoaderLayer ++
+            readerLayer ++
+            idManagerLayer ++
+            vertexProcessorLayer ++
+            edgeProcessorLayer ++
+            logger
+        )
       case None =>
         ZIO.fail(BadArgumentsException("Invalid command line arguments"))
     }

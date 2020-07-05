@@ -4,7 +4,6 @@ import java.time.LocalDate
 
 import scala.collection.JavaConverters._
 
-import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.types.{ IntegerType, LongType, StructField, StructType }
 import org.apache.tinkerpop.gremlin.structure.Direction
@@ -14,7 +13,7 @@ import zio.test.Assertion._
 import zio.test.environment.TestConsole
 
 import com.astrolabsoftware.grafink.Job.JobTime
-import com.astrolabsoftware.grafink.common.PartitionManager
+import com.astrolabsoftware.grafink.common.PaddedPartitionManager
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models._
@@ -83,7 +82,9 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
         runtime.unsafeRun(TempDirService.createTempDir.provideLayer(tempDirServiceLayer ++ zio.console.Console.live))
 
       val idManagerConfig =
-        ZLayer.succeed(IDManagerConfig(SparkPathConfig(tempDir.getAbsolutePath), HBaseColumnConfig("", "", "")))
+        ZLayer.succeed(
+          IDManagerConfig(IDManagerSparkConfig(tempDir.getAbsolutePath, false), HBaseColumnConfig("", "", ""))
+        )
 
       val edgeSchema = StructType(
         fields = Array(
@@ -98,7 +99,7 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
           .test(janusConfig)
           .use(graph =>
             for {
-              df         <- Reader.read(PartitionManager(date, 1))
+              df         <- Reader.readAndProcess(PaddedPartitionManager(date, 1))
               idManager  <- ZIO.access[IDManagerSparkService](_.get)
               vertexData <- idManager.process(df, "")
               vertexProcessorLive = VertexProcessorLive(janusConfig)

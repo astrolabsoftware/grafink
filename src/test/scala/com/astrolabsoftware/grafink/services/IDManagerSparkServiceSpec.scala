@@ -8,16 +8,10 @@ import zio.test.Assertion._
 import zio.test.environment.TestConsole
 
 import com.astrolabsoftware.grafink.Job.{ JobTime, SparkEnv }
-import com.astrolabsoftware.grafink.common.PartitionManager
+import com.astrolabsoftware.grafink.common.PaddedPartitionManager
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
-import com.astrolabsoftware.grafink.models.{
-  HBaseColumnConfig,
-  IDManagerConfig,
-  Parquet,
-  ReaderConfig,
-  SparkPathConfig
-}
+import com.astrolabsoftware.grafink.models._
 import com.astrolabsoftware.grafink.processor.VertexProcessorSpec.{ getClass, sparkLayer }
 import com.astrolabsoftware.grafink.services.reader.Reader
 import com.astrolabsoftware.grafink.utils.{ SparkTestEnv, TempDirService }
@@ -42,7 +36,8 @@ object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
         lastMax <- IDManagerSparkService.fetchID(idManagerDf)
       } yield lastMax
 
-      val idConfigLayer = ZLayer.succeed(IDManagerConfig(SparkPathConfig(path), HBaseColumnConfig("", "", "")))
+      val idConfigLayer =
+        ZLayer.succeed(IDManagerConfig(IDManagerSparkConfig(path, false), HBaseColumnConfig("", "", "")))
 
       val sparkLayer                 = SparkTestEnv.test
       val idManagerSparkServiceLayer = (logger ++ sparkLayer ++ idConfigLayer) >>> IDManagerSparkService.live
@@ -64,10 +59,12 @@ object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
         runtime.unsafeRun(TempDirService.createTempDir.provideLayer(tempDirServiceLayer ++ zio.console.Console.live))
 
       val idManagerConfig =
-        ZLayer.succeed(IDManagerConfig(SparkPathConfig(tempDir.getAbsolutePath), HBaseColumnConfig("", "", "")))
+        ZLayer.succeed(
+          IDManagerConfig(IDManagerSparkConfig(tempDir.getAbsolutePath, false), HBaseColumnConfig("", "", ""))
+        )
 
       val app = for {
-        df         <- Reader.read(PartitionManager(date, 1))
+        df         <- Reader.readAndProcess(PaddedPartitionManager(date, 1))
         vertexData <- IDManagerSparkService.process(df, "")
         idData     <- ZIO.effect(vertexData.current.select("id").collect)
         _          <- TempDirService.removeTempDir(tempDir)

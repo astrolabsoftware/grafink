@@ -24,7 +24,7 @@ import scopt.OptionParser
 
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 
-final case class ArgsConfig(confFile: String, startDate: LocalDate, duration: Int)
+final case class ArgsConfig(confFile: String, startDate: LocalDate, duration: Int, deleteMode: Boolean = false)
 
 /**
  * Command line parser for Grafink
@@ -69,6 +69,14 @@ trait CLParser {
         .text(
           "duration accepts duration (# of days) for which the job needs to process the data starting from startdate"
         )
+
+      opt[Unit]('d', "delete")
+        .optional()
+        .action((_, c) => c.copy(deleteMode = true))
+        .text(
+          "delete flag will delete the data for the specified startdate and duration for which the data has been computed by IDManager"
+        )
+
     }
 
   def validateDate(date: String): Boolean = Try { getLocalDate(date); true }.getOrElse(false)

@@ -22,7 +22,7 @@ import org.apache.spark.sql.types.{ LongType, StructField, StructType }
 import zio._
 import zio.logging.{ log, Logging }
 
-import com.astrolabsoftware.grafink.Job.{ JobTime, SparkEnv, VertexData }
+import com.astrolabsoftware.grafink.Job.{ SparkEnv, VertexData }
 import com.astrolabsoftware.grafink.common.PartitionManager
 import com.astrolabsoftware.grafink.models.GrafinkException.GetIdException
 import com.astrolabsoftware.grafink.models.IDManagerConfig

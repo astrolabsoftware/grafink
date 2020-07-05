@@ -20,7 +20,7 @@ object PartitionManagerSpec extends DefaultRunnableSpec {
       test("PartitionManager will correctly generate read paths") {
         val dateString       = "2019-02-01"
         val date             = LocalDate.parse(dateString, dateFormat)
-        val partitionManager = PartitionManager(startDate = date, duration = 2)
+        val partitionManager = PaddedPartitionManager(startDate = date, duration = 2)
 
         assert(partitionManager.partitionPaths)(
           hasSameElements(List(PartitionPath("2019", "02", "01"), PartitionPath("2019", "02", "02")))
@@ -31,7 +31,7 @@ object PartitionManagerSpec extends DefaultRunnableSpec {
         val path             = getClass.getResource(dataPath).getPath
         val dateString       = "2019-02-01"
         val date             = LocalDate.parse(dateString, dateFormat)
-        val partitionManager = PartitionManager(startDate = date, duration = 7)
+        val partitionManager = PaddedPartitionManager(startDate = date, duration = 7)
 
         val sparkLayer = SparkTestEnv.test
 

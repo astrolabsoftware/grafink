@@ -16,17 +16,11 @@
  */
 package com.astrolabsoftware.grafink.common
 
-import org.apache.spark.sql.types.{
-  BinaryType,
-  BooleanType,
-  ByteType,
-  DataType,
-  DoubleType,
-  FloatType,
-  IntegerType,
-  LongType,
-  StringType
-}
+import org.apache.hadoop.fs.FileSystem
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types._
+import zio.ZIO
+import zio.logging.log
 
 object Utils {
 
@@ -57,4 +51,13 @@ object Utils {
     case "bool"   => classOf[java.lang.Boolean]
     case _        => classOf[String]
   }
+
+  def withFileSystem[R, A](f: FileSystem => ZIO[R, Throwable, A])(implicit spark: SparkSession): ZIO[R, Throwable, A] =
+    ZIO
+      .effect(FileSystem.get(spark.sparkContext.hadoopConfiguration))
+      .bracket(fs =>
+        ZIO
+          .effect(fs.close())
+          .fold(failure => log.error(s"Error closing filesystem: $failure"), _ => ZIO.succeed(Unit))
+      )(fs => f(fs))
 }

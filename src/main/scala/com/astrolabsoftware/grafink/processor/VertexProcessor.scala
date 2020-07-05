@@ -18,14 +18,16 @@ package com.astrolabsoftware.grafink.processor
 
 import org.apache.spark.sql.{ DataFrame, Row }
 import org.apache.spark.sql.types.DataType
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.{ GraphTraversal, GraphTraversalSource }
 import org.apache.tinkerpop.gremlin.structure.T
 import org.janusgraph.core.JanusGraph
 import org.janusgraph.graphdb.database.StandardJanusGraph
-import zio.{ Has, URLayer, ZIO, ZLayer }
-import zio.logging.Logging
+import zio.{ Has, URLayer, ZIO, ZLayer, ZManaged }
+import zio.logging.{ log, Logging }
 
 import com.astrolabsoftware.grafink.JanusGraphEnv.withGraph
 import com.astrolabsoftware.grafink.common.Utils
+import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
 import com.astrolabsoftware.grafink.models.config.Config
 
@@ -37,6 +39,7 @@ object VertexProcessor {
 
   trait Service {
     def process(df: DataFrame): ZIO[Logging, Throwable, Unit]
+    def delete(df: DataFrame): ZIO[Logging, Throwable, Unit]
   }
 
   val live: URLayer[Has[JanusGraphConfig] with Logging, VertexProcessorService] =
@@ -49,6 +52,8 @@ object VertexProcessor {
   def process(df: DataFrame): ZIO[VertexProcessorService with Logging, Throwable, Unit] =
     ZIO.accessM(_.get.process(df))
 
+  def delete(df: DataFrame): ZIO[VertexProcessorService with Logging, Throwable, Unit] =
+    ZIO.accessM(_.get.delete(df))
 }
 
 final case class VertexProcessorLive(config: JanusGraphConfig) extends VertexProcessor.Service {
@@ -103,6 +108,49 @@ final case class VertexProcessorLive(config: JanusGraphConfig) extends VertexPro
     } yield ()
   }
 
+  def deleteJob(
+    config: JanusGraphConfig,
+    graph: JanusGraph,
+    partition: Iterator[Row]
+  ): ZIO[Logging, Throwable, Unit] = {
+
+    val batchSize = config.vertexLoader.batchSize
+    val g: ZManaged[Any, Nothing, GraphTraversalSource] =
+      ZManaged.make(ZIO.succeed(graph.traversal()))(g =>
+        ZIO
+          .effect(g.close())
+          .fold(
+            f => log.info(s"Exception closing graph traversal $f"),
+            _ => log.info("Graph traversal closed successfully")
+          )
+      )
+    val idManager = graph.asInstanceOf[StandardJanusGraph].getIDManager
+    val kgroup    = partition.grouped(batchSize)
+    val l = (g: GraphTraversalSource) =>
+      kgroup.map(group =>
+        for {
+          _ <- ZIO.collectAll_(
+            group.map { r =>
+              val id = idManager.toVertexId(r.getAs[Long]("id"))
+              for {
+                vertex <- ZIO.effect(g.V(java.lang.Long.valueOf(id)).next())
+                _      <- ZIO.effect(vertex.remove())
+                // Strangely need to commit on every removal, otherwise we end up with some vertex not being deleted
+                _ <- ZIO.effect(graph.tx.commit) catchAll (e => log.error(s"Error deleting vertex with id $id : $e"))
+              } yield ()
+            }
+          )
+        } yield ()
+      )
+
+    val effect = (g: GraphTraversalSource) =>
+      for {
+        _ <- ZIO.collectAll_(l(g).toIterable)
+        _ <- ZIO.effect(graph.tx.commit)
+      } yield ()
+    g.use(g => effect(g))
+  }
+
   def getDataTypeForVertexProperties(vertexProperties: List[String], df: DataFrame): Map[String, DataType] = {
     val vertexPropertiesSet = vertexProperties.toSet
     df.schema.fields.filter(f => vertexPropertiesSet.contains(f.name)).map(f => f.name -> f.dataType).toMap
@@ -123,5 +171,16 @@ final case class VertexProcessorLive(config: JanusGraphConfig) extends VertexPro
     val load = loadFunc
 
     ZIO.effect(df.foreachPartition(load))
+  }
+
+  override def delete(df: DataFrame): ZIO[Logging, Throwable, Unit] = {
+    val jobFunc = deleteJob _
+    def deleteFunc: (Iterator[Row]) => Unit = (partition: Iterator[Row]) => {
+      val c           = config
+      val executorJob = withGraph(c, graph => jobFunc(c, graph, partition))
+      zio.Runtime.default.unsafeRun(executorJob.provideLayer(Logger.live))
+    }
+    val delete = deleteFunc
+    ZIO.effect(df.foreachPartition(delete))
   }
 }

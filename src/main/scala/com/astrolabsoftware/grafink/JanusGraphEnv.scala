@@ -92,6 +92,6 @@ object JanusGraphEnv extends Serializable {
         .set("graph.set-vertex-id", true)
         .open()
 
-  def withGraph(config: JanusGraphConfig, use: JanusGraph => ZIO[Any, Throwable, Unit]): ZIO[Any, Throwable, Unit] =
+  def withGraph[R](config: JanusGraphConfig, use: JanusGraph => ZIO[R, Throwable, Unit]): ZIO[R, Throwable, Unit] =
     ZIO.effect(withHBaseStorageWithBulkLoad(config)).bracket(releaseGraph, use)
 }

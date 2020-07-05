@@ -52,11 +52,11 @@ case class JanusGraphConfig(
   storage: JanusGraphStorageConfig
 )
 
-case class SparkPathConfig(dataPath: String)
+case class IDManagerSparkConfig(dataPath: String, clearOnDelete: Boolean)
 
 case class HBaseColumnConfig(tableName: String, cf: String, qualifier: String)
 
-case class IDManagerConfig(spark: SparkPathConfig, hbase: HBaseColumnConfig)
+case class IDManagerConfig(spark: IDManagerSparkConfig, hbase: HBaseColumnConfig)
 
 final case class GrafinkConfiguration(
   reader: ReaderConfig,
