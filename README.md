@@ -45,6 +45,8 @@ idManager {
   spark {
     // The base path where data will be generated. Note that partitioning of the original data is maintained
     dataPath = "/test/intermediate/base/path"
+    // Whether to clear IDManager data when running grafink in delete mode to delete data from JanusGraph
+    clearOnDelete = false
   }
   // This configuration is used by IDManager backed by HBase
   hbase {
