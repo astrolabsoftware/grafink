@@ -17,7 +17,16 @@ object PartitionManagerSpec extends DefaultRunnableSpec {
 
   def spec: ZSpec[Environment, Failure] =
     suite("PartitionManagerSpec")(
-      test("PartitionManager will correctly generate read paths") {
+      test("PartitionManagerImpl will correctly generate read paths") {
+        val dateString       = "2019-02-01"
+        val date             = LocalDate.parse(dateString, dateFormat)
+        val partitionManager = PartitionManagerImpl(startDate = date, duration = 2)
+
+        assert(partitionManager.partitionPaths)(
+          hasSameElements(List(PartitionPath("2019", "2", "1"), PartitionPath("2019", "2", "2")))
+        )
+      },
+      test("PaddedPartitionManager will correctly generate read paths") {
         val dateString       = "2019-02-01"
         val date             = LocalDate.parse(dateString, dateFormat)
         val partitionManager = PaddedPartitionManager(startDate = date, duration = 2)
@@ -26,7 +35,7 @@ object PartitionManagerSpec extends DefaultRunnableSpec {
           hasSameElements(List(PartitionPath("2019", "02", "01"), PartitionPath("2019", "02", "02")))
         )
       },
-      testM("PartitionManager will correctly filter out non-existing paths") {
+      testM("PaddedPartitionManager will correctly filter out non-existing paths") {
         val dataPath         = "/data"
         val path             = getClass.getResource(dataPath).getPath
         val dateString       = "2019-02-01"

@@ -109,12 +109,10 @@ final case class VertexProcessorLive(config: JanusGraphConfig) extends VertexPro
   }
 
   def deleteJob(
-    config: JanusGraphConfig,
     graph: JanusGraph,
     partition: Iterator[Row]
   ): ZIO[Logging, Throwable, Unit] = {
 
-    val batchSize = config.vertexLoader.batchSize
     val g: ZManaged[Any, Nothing, GraphTraversalSource] =
       ZManaged.make(ZIO.succeed(graph.traversal()))(g =>
         ZIO
@@ -125,28 +123,21 @@ final case class VertexProcessorLive(config: JanusGraphConfig) extends VertexPro
           )
       )
     val idManager = graph.asInstanceOf[StandardJanusGraph].getIDManager
-    val kgroup    = partition.grouped(batchSize)
     val l = (g: GraphTraversalSource) =>
-      kgroup.map(group =>
+      partition.map { r =>
+        val id = idManager.toVertexId(r.getAs[Long]("id"))
         for {
-          _ <- ZIO.collectAll_(
-            group.map { r =>
-              val id = idManager.toVertexId(r.getAs[Long]("id"))
-              for {
-                vertex <- ZIO.effect(g.V(java.lang.Long.valueOf(id)).next())
-                _      <- ZIO.effect(vertex.remove())
-                // Strangely need to commit on every removal, otherwise we end up with some vertex not being deleted
-                _ <- ZIO.effect(graph.tx.commit) catchAll (e => log.error(s"Error deleting vertex with id $id : $e"))
-              } yield ()
-            }
-          )
+          vertex <- ZIO.effect(g.V(java.lang.Long.valueOf(id)).next())
+          _      <- ZIO.effect(vertex.remove())
+          // Strangely need to commit on every removal, otherwise we end up with some vertex not being deleted
+          _ <- ZIO.effect(graph.tx().commit()) catchAll (e => log.error(s"Error deleting vertex with id $id : $e"))
         } yield ()
-      )
+      }
 
     val effect = (g: GraphTraversalSource) =>
       for {
         _ <- ZIO.collectAll_(l(g).toIterable)
-        _ <- ZIO.effect(graph.tx.commit)
+        _ <- ZIO.effect(graph.tx().commit())
       } yield ()
     g.use(g => effect(g))
   }
@@ -177,7 +168,7 @@ final case class VertexProcessorLive(config: JanusGraphConfig) extends VertexPro
     val jobFunc = deleteJob _
     def deleteFunc: (Iterator[Row]) => Unit = (partition: Iterator[Row]) => {
       val c           = config
-      val executorJob = withGraph(c, graph => jobFunc(c, graph, partition))
+      val executorJob = withGraph(c, graph => jobFunc(graph, partition))
       zio.Runtime.default.unsafeRun(executorJob.provideLayer(Logger.live))
     }
     val delete = deleteFunc

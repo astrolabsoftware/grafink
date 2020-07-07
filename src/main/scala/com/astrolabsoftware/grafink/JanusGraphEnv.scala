@@ -25,10 +25,12 @@ import com.astrolabsoftware.grafink.models.JanusGraphConfig
 
 object JanusGraphEnv extends Serializable {
 
-  def releaseGraph: JanusGraph => zio.URIO[Any, ZIO[Logging, Nothing, Unit]] =
+  def releaseGraph: JanusGraph => zio.URIO[Any, Unit] =
     (graph: JanusGraph) =>
-      ZIO
-        .effect(graph.close())
+      (for {
+        _ <- ZIO.effect(graph.tx().commit())
+        _ <- ZIO.effect(graph.close())
+      } yield ())
         .fold(_ => log.error(s"Error closing janusgraph instance"), _ => log.info(s"JanusGraph instance closed"))
 
   def hbaseBasic(config: JanusGraphConfig): ZManaged[Logging, Throwable, JanusGraph] =

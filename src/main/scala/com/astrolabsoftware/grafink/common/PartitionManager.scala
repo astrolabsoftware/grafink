@@ -101,15 +101,14 @@ trait PartitionManager {
     for {
       paths <- getValidPartitionPathStrings(basePath, fs)
     } yield ZIO
-      .collectAll(paths.map { path =>
+      .collectAll_(paths.map { path =>
         RIO
           .effect(fs.delete(new Path(path), true))
-          .fold(
+          .tapBoth(
             fail => log.error(s"error deleting path $path, failure: $fail"),
             _ => log.info(s"deleted partition path $path")
           )
       })
-      .ignore
 }
 
 case class PartitionManagerImpl(override val startDate: LocalDate, override val duration: Int) extends PartitionManager
