@@ -75,6 +75,7 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
               _ <- vertexProcessorLive
                 .job(janusConfig, graph, dataTypeForVertexPropertyCols, vertexData.current.collect.toIterator)
               g = graph.traversal()
+              _ <- TempDirService.removeTempDir(tempDir)
             } yield g.V().toList.asScala.map(_.property("objectId").value().toString).toList
           )
       } yield output

@@ -88,7 +88,9 @@ final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConf
   override def readAll(schema: StructType, tableName: String): ZIO[Logging, Throwable, DataFrame] =
     ZIO.effect(spark.read.parquet(s"${config.spark.dataPath}/$tableName")).catchSome {
       // Catch case where there is no data to read, this means this is being run on a new setup
-      case e: org.apache.spark.sql.AnalysisException if e.message.contains("Unable to infer schema for Parquet") =>
+      case e: org.apache.spark.sql.AnalysisException
+          if e.message.contains("Unable to infer schema for Parquet") ||
+            e.message.contains("Path does not exist") =>
         for {
           _ <- log.warn(s"No data found at ${config.spark.dataPath}/$tableName, returning empty dataframe")
         } yield spark.createDataFrame(

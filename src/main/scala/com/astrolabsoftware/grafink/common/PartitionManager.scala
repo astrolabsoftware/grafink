@@ -100,15 +100,16 @@ trait PartitionManager {
   def deletePartitions(basePath: String, fs: FileSystem): ZIO[Logging, Throwable, Unit] =
     for {
       paths <- getValidPartitionPathStrings(basePath, fs)
-    } yield ZIO
-      .collectAll_(paths.map { path =>
-        RIO
-          .effect(fs.delete(new Path(path), true))
-          .tapBoth(
-            fail => log.error(s"error deleting path $path, failure: $fail"),
-            _ => log.info(s"deleted partition path $path")
-          )
-      })
+      _ <- ZIO
+        .collectAll(paths.map { path =>
+          RIO
+            .effect(fs.delete(new Path(path), true))
+            .tapBoth(
+              fail => log.error(s"error deleting path $path, failure: $fail"),
+              _ => log.info(s"deleted partition path $path")
+            )
+        })
+    } yield ()
 }
 
 case class PartitionManagerImpl(override val startDate: LocalDate, override val duration: Int) extends PartitionManager
