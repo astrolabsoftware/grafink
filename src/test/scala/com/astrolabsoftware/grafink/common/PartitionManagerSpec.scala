@@ -14,8 +14,8 @@ import zio.test.environment.TestConsole
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models._
-import com.astrolabsoftware.grafink.services.IDManagerSparkService.IDManagerSparkService
 import com.astrolabsoftware.grafink.services.IDManagerSparkService
+import com.astrolabsoftware.grafink.services.IDManagerSparkService.IDManagerSparkService
 import com.astrolabsoftware.grafink.utils.{ SparkTestEnv, TempDirService }
 
 object PartitionManagerSpec extends DefaultRunnableSpec {
@@ -83,7 +83,8 @@ object PartitionManagerSpec extends DefaultRunnableSpec {
             SchemaConfig(
               vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
               vertexLabel = "type",
-              edgeLabels = List()
+              edgeLabels = List(),
+              index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
             ),
             VertexLoaderConfig(10),
             EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig(""))),

@@ -30,11 +30,12 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
 
   def spec: ZSpec[Environment, Failure] = suite("VertexProcessorSpec")(
     testM("VertexProcessor will correctly add input alerts into janusgraph") {
-      val dateString = "2019-02-01"
-      val date       = LocalDate.parse(dateString, dateFormat)
-      val dataPath   = "/data"
-      val path       = getClass.getResource(dataPath).getPath
-      val logger     = Logger.test
+      val dateString    = "2019-02-01"
+      val date          = LocalDate.parse(dateString, dateFormat)
+      val dataPath      = "/data"
+      val path          = getClass.getResource(dataPath).getPath
+      val logger        = Logger.test
+      val objectIdIndex = "objectIdIndex"
       val readerConfig =
         ZLayer.succeed(
           ReaderConfig(path, Parquet, keepCols = List("rfscore", "snnscore", "objectId"), keepColsRenamed = List())
@@ -44,7 +45,12 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
           SchemaConfig(
             vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
             vertexLabel = "type",
-            edgeLabels = List()
+            edgeLabels = List(),
+            IndexConfig(
+              composite = List(CompositeIndex(name = objectIdIndex, properties = List("objectId"))),
+              mixed = List.empty,
+              edge = List.empty
+            )
           ),
           VertexLoaderConfig(10),
           EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig(""))),
@@ -103,7 +109,8 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
           SchemaConfig(
             vertexPropertyCols = List("rfscore", "objectId"),
             vertexLabel = "type",
-            edgeLabels = List()
+            edgeLabels = List(),
+            index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
           ),
           VertexLoaderConfig(1),
           EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig(""))),

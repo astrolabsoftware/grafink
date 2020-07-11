@@ -38,7 +38,8 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
           SchemaConfig(
             vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
             vertexLabel = "type",
-            edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long")))
+            edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long"))),
+            index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
           ),
           VertexLoaderConfig(10),
           EdgeLoaderConfig(10, parallelismConfig, taskSize, EdgeRulesConfig(similarityConfig)),
@@ -67,7 +68,12 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
           SchemaConfig(
             vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
             vertexLabel = "type",
-            edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long")))
+            edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long"))),
+            index = IndexConfig(
+              composite = List.empty,
+              mixed = List.empty,
+              edge = List(EdgeIndex(name = "similarityIndex", properties = List("value"), label = edgeLabel))
+            )
           ),
           VertexLoaderConfig(10),
           EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(similarityConfig)),
