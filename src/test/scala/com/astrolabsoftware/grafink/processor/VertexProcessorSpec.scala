@@ -14,7 +14,6 @@ import zio.test.{ DefaultRunnableSpec, _ }
 import zio.test.Assertion._
 import zio.test.environment.TestConsole
 
-import com.astrolabsoftware.grafink.Job.JobTime
 import com.astrolabsoftware.grafink.common.{ PaddedPartitionManager, Utils }
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
@@ -54,7 +53,8 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
           ),
           VertexLoaderConfig(10),
           EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig(""))),
-          JanusGraphStorageConfig("", 0, tableName = "test")
+          JanusGraphStorageConfig("", 0, tableName = "test"),
+          JanusGraphIndexBackendConfig("", "", "")
         )
 
       val tempDirServiceLayer = ((zio.console.Console.live) >>> TempDirService.test)
@@ -114,7 +114,8 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
           ),
           VertexLoaderConfig(1),
           EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig(""))),
-          JanusGraphStorageConfig("", 0, tableName = "test")
+          JanusGraphStorageConfig("", 0, tableName = "test"),
+          JanusGraphIndexBackendConfig("", "", "")
         )
 
       val vertexSchema = StructType(

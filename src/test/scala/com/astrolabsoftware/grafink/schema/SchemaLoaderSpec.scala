@@ -17,6 +17,7 @@ import com.astrolabsoftware.grafink.models.{
   EdgeRulesConfig,
   IndexConfig,
   JanusGraphConfig,
+  JanusGraphIndexBackendConfig,
   JanusGraphStorageConfig,
   SchemaConfig,
   SimilarityConfig,
@@ -48,7 +49,8 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
           ),
           VertexLoaderConfig(10),
           EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore"))),
-          JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph")
+          JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph"),
+          JanusGraphIndexBackendConfig("", "", "")
         )
 
       val app =
@@ -95,7 +97,8 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
           ),
           VertexLoaderConfig(10),
           EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore"))),
-          JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph")
+          JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph"),
+          JanusGraphIndexBackendConfig("", "", "")
         )
 
       case class IndexResult(name: String, status: SchemaStatus)

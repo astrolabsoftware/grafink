@@ -12,7 +12,6 @@ import zio.test.{ DefaultRunnableSpec, _ }
 import zio.test.Assertion._
 import zio.test.environment.TestConsole
 
-import com.astrolabsoftware.grafink.Job.JobTime
 import com.astrolabsoftware.grafink.common.PaddedPartitionManager
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
@@ -43,7 +42,8 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
           ),
           VertexLoaderConfig(10),
           EdgeLoaderConfig(10, parallelismConfig, taskSize, EdgeRulesConfig(similarityConfig)),
-          JanusGraphStorageConfig("", 0, tableName = "test")
+          JanusGraphStorageConfig("", 0, tableName = "test"),
+          JanusGraphIndexBackendConfig("", "", "")
         )
       val parallelism1 = EdgeProcessorLive(janusConfig).getParallelism(3000).partitions
       val parallelism2 = EdgeProcessorLive(janusConfig).getParallelism(300000).partitions
@@ -77,10 +77,9 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
           ),
           VertexLoaderConfig(10),
           EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(similarityConfig)),
-          JanusGraphStorageConfig("", 0, tableName = "test")
+          JanusGraphStorageConfig("", 0, tableName = "test"),
+          JanusGraphIndexBackendConfig("", "", "")
         )
-
-      val jobTime = JobTime(date, 1)
 
       val tempDirServiceLayer = ((zio.console.Console.live) >>> TempDirService.test)
       val runtime             = zio.Runtime.default

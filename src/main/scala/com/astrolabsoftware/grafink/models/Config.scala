@@ -58,11 +58,14 @@ case class EdgeLoaderConfig(batchSize: Int, parallelism: Int, taskSize: Int, rul
 
 case class JanusGraphStorageConfig(host: String, port: Int, tableName: String)
 
+case class JanusGraphIndexBackendConfig(name: String, indexName: String, host: String)
+
 case class JanusGraphConfig(
   schema: SchemaConfig,
   vertexLoader: VertexLoaderConfig,
   edgeLoader: EdgeLoaderConfig,
-  storage: JanusGraphStorageConfig
+  storage: JanusGraphStorageConfig,
+  indexBackend: JanusGraphIndexBackendConfig
 )
 
 case class IDManagerSparkConfig(dataPath: String, clearOnDelete: Boolean)

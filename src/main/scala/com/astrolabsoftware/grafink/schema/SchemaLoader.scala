@@ -21,9 +21,9 @@ import scala.collection.JavaConverters._
 import org.apache.spark.sql.types.{ DataType, StructType }
 import org.apache.tinkerpop.gremlin.structure.{ Direction, Vertex }
 import org.apache.tinkerpop.gremlin.structure.VertexProperty.Cardinality
-import org.janusgraph.core.JanusGraph
+import org.janusgraph.core.{ JanusGraph, PropertyKey }
 import org.janusgraph.core.Multiplicity._
-import org.janusgraph.core.schema.{ Index, JanusGraphManagement, SchemaAction }
+import org.janusgraph.core.schema.{ Index, JanusGraphIndex, JanusGraphManagement, SchemaAction }
 import org.janusgraph.core.schema.JanusGraphManagement.IndexJobFuture
 import org.janusgraph.graphdb.database.management.ManagementSystem
 import zio.{ Has, Task, URLayer, ZIO, ZLayer }
@@ -50,6 +50,12 @@ object SchemaLoader {
   private def enableIndices[T <: Index](indices: List[T], mgmt: JanusGraphManagement): List[Task[IndexJobFuture]] =
     indices.map(i => ZIO.effect(mgmt.updateIndex(mgmt.getGraphIndex(i.name()), SchemaAction.ENABLE_INDEX)))
 
+  private def addPropertyKeys(
+    propertyKeys: List[PropertyKey],
+    index: JanusGraphManagement.IndexBuilder
+  ): JanusGraphManagement.IndexBuilder =
+    propertyKeys.foldLeft(index)((i, key) => i.addKey(key))
+
   val live: URLayer[Logging with Has[JanusGraphConfig], SchemaLoaderService] =
     ZLayer.fromEffect(
       for {
@@ -64,6 +70,8 @@ object SchemaLoader {
             dataSchema.fields.map(f => f.name -> f.dataType).toMap
 
           val compositeIndices = janusGraphConfig.schema.index.composite
+          val mixedIndices     = janusGraphConfig.schema.index.mixed
+          val indexBackend     = janusGraphConfig.indexBackend
           val edgeIndices      = janusGraphConfig.schema.index.edge
 
           for {
@@ -111,8 +119,20 @@ object SchemaLoader {
                 val keysToAdd = vertexProperties.filter(x => i.properties.contains(x.name()))
                 for {
                   index          <- ZIO.effect(mgmt.buildIndex(i.name, classOf[Vertex]))
-                  indexToBuild   <- ZIO.effect(keysToAdd.foldLeft(index)((i, key) => i.addKey(key)))
+                  indexToBuild   <- ZIO.effect(addPropertyKeys(keysToAdd, index))
                   compositeIndex <- ZIO.effect(indexToBuild.buildCompositeIndex())
+                } yield compositeIndex
+              }
+            )
+
+            // Add mixed indices
+            mixedIndicesBuilt <- ZIO.collectAll(
+              mixedIndices.map { i =>
+                val keysToAdd = vertexProperties.filter(x => i.properties.contains(x.name()))
+                for {
+                  index          <- ZIO.effect(mgmt.buildIndex(i.name, classOf[Vertex]))
+                  indexToBuild   <- ZIO.effect(addPropertyKeys(keysToAdd, index))
+                  compositeIndex <- ZIO.effect(indexToBuild.buildMixedIndex(indexBackend.name))
                 } yield compositeIndex
               }
             )

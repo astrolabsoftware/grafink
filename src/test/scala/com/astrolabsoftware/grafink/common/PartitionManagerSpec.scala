@@ -88,7 +88,8 @@ object PartitionManagerSpec extends DefaultRunnableSpec {
             ),
             VertexLoaderConfig(10),
             EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig(""))),
-            JanusGraphStorageConfig("", 0, tableName = "test")
+            JanusGraphStorageConfig("", 0, tableName = "test"),
+            JanusGraphIndexBackendConfig("", "", "")
           )
 
         val idManagerConfig =
