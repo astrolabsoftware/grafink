@@ -51,13 +51,15 @@ trait CLParser {
         .text("config accepts path to a configuration file")
 
       opt[String]('s', "startdate")
-        .required()
+        .optional()
         .action((x, c) => c.copy(startDate = LocalDate.parse(x, dateFormat)))
         .validate(x =>
           if (validateDate(x)) success
           else failure("Option --startdate must be a valid date in format (yyyy-MM-dd)")
         )
-        .text("startdate accepts start day's date for which the job needs to be run (yyyy-MM-dd)")
+        .text(
+          "startdate accepts start day's date for which the job needs to be run (yyyy-MM-dd) defaults to yesterday's date"
+        )
 
       opt[Int]('d', "duration")
         .optional()
