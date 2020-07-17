@@ -51,11 +51,17 @@ object ConfigSpec extends DefaultRunnableSpec {
               SchemaConfig(
                 vertexPropertyCols = List("rfscore", "snnscore"),
                 vertexLabel = "type",
-                edgeLabels = List(EdgeLabelConfig("similarity", Map("key" -> "value", "typ" -> "int")))
+                edgeLabels = List(EdgeLabelConfig("similarity", Map("key" -> "value", "typ" -> "int"))),
+                index = IndexConfig(
+                  composite = List(CompositeIndex(name = "objectIdIndex", properties = List("objectId"))),
+                  mixed = List.empty,
+                  edge = List(EdgeIndex(name = "similarityIndex", properties = List("value"), label = "similarity"))
+                )
               ),
               VertexLoaderConfig(10),
               EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore OR objectId"))),
-              JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph")
+              JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph"),
+              JanusGraphIndexBackendConfig("elastic", "elastictest", "127.0.0.1:9200")
             )
           )
         )

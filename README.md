@@ -45,6 +45,8 @@ idManager {
   spark {
     // The base path where data will be generated. Note that partitioning of the original data is maintained
     dataPath = "/test/intermediate/base/path"
+    // Whether to clear IDManager data when running grafink in delete mode to delete data from JanusGraph
+    clearOnDelete = false
   }
   // This configuration is used by IDManager backed by HBase
   hbase {
@@ -76,6 +78,38 @@ janusgraph {
         }
       }
     ]
+    // List of indices to add while loading the schema
+    index {
+      // Adds composite indices, handled by JanusGraph storage backend
+      composite = [
+        {
+          // Name of the index, should be unique
+          name = "objectIdIndex"
+          // Vertex property keys to index
+          properties = ["objectId"]
+        }
+      ]
+      // Adds mixed indices, handled by JanusGraph indexing backend
+      mixed = [
+        {
+          // Name of the index, should be unique
+          name = "rfScoreAndcdsx"
+          // Vertex property keys to index
+          properties = ["rfscore", "cdsxmatch"]
+        }
+      ]
+      // Adds vertex centric indices, handled by JanusGraph storage backend 
+      edge = [
+        {
+          // Name of the index, should be unique
+          name = "similarityIndex"
+          // Edge property keys to index, handled as 'RelationType' 
+          properties = ["value"]
+          // Edge Label for which to create the index
+          label = "similarity"
+        }
+      ]
+    }
   }
   // VertexLoader batch settings
   vertexLoader {
@@ -92,11 +126,20 @@ janusgraph {
       }
     }
   }
-  // Janusgraph storage settings
+  // JanusGraph storage settings
   storage {
     host: "127.0.0.1"
     port: 8182
     tableName = "TestJanusGraph"
+  }
+  // JanusGraph Indexing Backend settings
+  indexBackend {
+    // We use ElasticSearch here, but other backends like Solr can also be used
+    name = "elastic"
+    // Name of the Elasticsearch index to create for mixed indices
+    indexName = "elastictest"
+    // Host Port for Elasticsearch
+    host: "127.0.0.1:9200"
   }
 }
 
@@ -113,7 +156,13 @@ hbase {
 The schema model is described [here](docs/Schema-Model.md)
 Grafink tries to take advantage of bulk-loading feature in Janusgraph and disables
 the schema checks in place while loading vertices and edges.
-Hence it pre-creates the required graph schema (vertex properties, edge properties, labels etc).
+Hence it pre-creates the required graph schema.
+The supported Graph Elements while creating the schema include
+- Vertex Labels and Properties
+- Edge Label and Properties
+- Composite Index
+- Mixed Index
+- Vertex-Centric (Edge) Index
 
 There is a mechanism to check if the schema in the target storage table already exists
 and then load the schema only if needed.

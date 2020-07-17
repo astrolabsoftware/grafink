@@ -26,16 +26,14 @@ import org.apache.hadoop.fs.{ FileSystem, Path }
 import zio.{ RIO, ZIO }
 import zio.logging.{ log, Logging }
 
+import com.astrolabsoftware.grafink.common.PartitionManager.{ paddedInt, toPathString }
+
 case class PartitionPath(year: String, month: String, day: String)
 
-/**
- * Manages the partition path for the data
- * @param startDate
- * @param duration
- */
-case class PartitionManager(startDate: LocalDate, duration: Int) {
+trait PartitionManager {
 
-  import PartitionManager._
+  def startDate: LocalDate
+  def duration: Int
 
   /**
    * Given the date, convert into PartitionPath instance
@@ -44,9 +42,9 @@ case class PartitionManager(startDate: LocalDate, duration: Int) {
    */
   implicit def toPartitionPath(date: LocalDate): PartitionPath =
     PartitionPath(
-      year = s"${f"${date.getYear}%02d"}",
-      month = paddedInt(date.getMonth.getValue),
-      day = paddedInt(date.getDayOfMonth)
+      year = s"${date.getYear}",
+      month = s"${date.getMonth.getValue}",
+      day = s"${date.getDayOfMonth}"
     )
 
   /**
@@ -102,17 +100,41 @@ case class PartitionManager(startDate: LocalDate, duration: Int) {
   def deletePartitions(basePath: String, fs: FileSystem): ZIO[Logging, Throwable, Unit] =
     for {
       paths <- getValidPartitionPathStrings(basePath, fs)
-    } yield ZIO
-      .collectAll(paths.map { path =>
-        RIO
-          .effect(fs.delete(new Path(path), true))
-          .fold(
-            fail => log.error(s"error deleting path $path, failure: $fail"),
-            _ => log.info(s"deleted partition path $path")
-          )
-      })
-      .ignore
+      _ <- ZIO
+        .collectAll(paths.map { path =>
+          RIO
+            .effect(fs.delete(new Path(path), true))
+            .tapBoth(
+              fail => log.error(s"error deleting path $path, failure: $fail"),
+              _ => log.info(s"deleted partition path $path")
+            )
+        })
+    } yield ()
+}
 
+case class PartitionManagerImpl(override val startDate: LocalDate, override val duration: Int) extends PartitionManager
+
+/**
+ * Manages the partition path for the data, after padding the partition values
+ * @param startDate
+ * @param duration
+ */
+case class PaddedPartitionManager(override val startDate: LocalDate, override val duration: Int)
+    extends PartitionManager {
+
+  import PartitionManager._
+
+  /**
+   * Given the date, convert into PartitionPath instance with padded values
+   * @param date
+   * @return
+   */
+  implicit override def toPartitionPath(date: LocalDate): PartitionPath =
+    PartitionPath(
+      year = s"${f"${date.getYear}%02d"}",
+      month = paddedInt(date.getMonth.getValue),
+      day = paddedInt(date.getDayOfMonth)
+    )
 }
 
 /**
@@ -124,7 +146,7 @@ object PartitionManager {
   val dateFormat: DateTimeFormatter  = DateTimeFormatter.ofPattern("yyyy-MM-dd")
   val partitionColumns: List[String] = List("year", "month", "day")
 
-  def apply(duration: Int): PartitionManager = PartitionManager(LocalDate.now, duration)
+  def apply(duration: Int): PaddedPartitionManager = PaddedPartitionManager(LocalDate.now, duration)
 
   /**
    * Given the base path and partitionPath object, generates full partition path string

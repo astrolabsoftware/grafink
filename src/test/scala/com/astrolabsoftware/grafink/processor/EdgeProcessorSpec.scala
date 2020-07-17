@@ -4,7 +4,6 @@ import java.time.LocalDate
 
 import scala.collection.JavaConverters._
 
-import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.types.{ IntegerType, LongType, StructField, StructType }
 import org.apache.tinkerpop.gremlin.structure.Direction
@@ -13,8 +12,7 @@ import zio.test.{ DefaultRunnableSpec, _ }
 import zio.test.Assertion._
 import zio.test.environment.TestConsole
 
-import com.astrolabsoftware.grafink.Job.JobTime
-import com.astrolabsoftware.grafink.common.PartitionManager
+import com.astrolabsoftware.grafink.common.PaddedPartitionManager
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models._
@@ -39,11 +37,13 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
           SchemaConfig(
             vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
             vertexLabel = "type",
-            edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long")))
+            edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long"))),
+            index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
           ),
           VertexLoaderConfig(10),
           EdgeLoaderConfig(10, parallelismConfig, taskSize, EdgeRulesConfig(similarityConfig)),
-          JanusGraphStorageConfig("", 0, tableName = "test")
+          JanusGraphStorageConfig("", 0, tableName = "test"),
+          JanusGraphIndexBackendConfig("", "", "")
         )
       val parallelism1 = EdgeProcessorLive(janusConfig).getParallelism(3000).partitions
       val parallelism2 = EdgeProcessorLive(janusConfig).getParallelism(300000).partitions
@@ -68,14 +68,18 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
           SchemaConfig(
             vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
             vertexLabel = "type",
-            edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long")))
+            edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long"))),
+            index = IndexConfig(
+              composite = List.empty,
+              mixed = List.empty,
+              edge = List(EdgeIndex(name = "similarityIndex", properties = List("value"), label = edgeLabel))
+            )
           ),
           VertexLoaderConfig(10),
           EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(similarityConfig)),
-          JanusGraphStorageConfig("", 0, tableName = "test")
+          JanusGraphStorageConfig("", 0, tableName = "test"),
+          JanusGraphIndexBackendConfig("", "", "")
         )
-
-      val jobTime = JobTime(date, 1)
 
       val tempDirServiceLayer = ((zio.console.Console.live) >>> TempDirService.test)
       val runtime             = zio.Runtime.default
@@ -83,7 +87,9 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
         runtime.unsafeRun(TempDirService.createTempDir.provideLayer(tempDirServiceLayer ++ zio.console.Console.live))
 
       val idManagerConfig =
-        ZLayer.succeed(IDManagerConfig(SparkPathConfig(tempDir.getAbsolutePath), HBaseColumnConfig("", "", "")))
+        ZLayer.succeed(
+          IDManagerConfig(IDManagerSparkConfig(tempDir.getAbsolutePath, false), HBaseColumnConfig("", "", ""))
+        )
 
       val edgeSchema = StructType(
         fields = Array(
@@ -98,7 +104,7 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
           .test(janusConfig)
           .use(graph =>
             for {
-              df         <- Reader.read(PartitionManager(date, 1))
+              df         <- Reader.readAndProcess(PaddedPartitionManager(date, 1))
               idManager  <- ZIO.access[IDManagerSparkService](_.get)
               vertexData <- idManager.process(df, "")
               vertexProcessorLive = VertexProcessorLive(janusConfig)

@@ -33,7 +33,20 @@ case class HBaseConfig(zookeeper: HBaseZookeeperConfig)
 
 case class EdgeLabelConfig(name: String, properties: Map[String, String])
 
-case class SchemaConfig(vertexPropertyCols: List[String], vertexLabel: String, edgeLabels: List[EdgeLabelConfig])
+case class CompositeIndex(name: String, properties: List[String])
+
+case class MixedIndex(name: String, properties: List[String])
+
+case class EdgeIndex(name: String, properties: List[String], label: String)
+
+case class IndexConfig(composite: List[CompositeIndex], mixed: List[MixedIndex], edge: List[EdgeIndex])
+
+case class SchemaConfig(
+  vertexPropertyCols: List[String],
+  vertexLabel: String,
+  edgeLabels: List[EdgeLabelConfig],
+  index: IndexConfig
+)
 
 case class VertexLoaderConfig(batchSize: Int)
 
@@ -45,18 +58,21 @@ case class EdgeLoaderConfig(batchSize: Int, parallelism: Int, taskSize: Int, rul
 
 case class JanusGraphStorageConfig(host: String, port: Int, tableName: String)
 
+case class JanusGraphIndexBackendConfig(name: String, indexName: String, host: String)
+
 case class JanusGraphConfig(
   schema: SchemaConfig,
   vertexLoader: VertexLoaderConfig,
   edgeLoader: EdgeLoaderConfig,
-  storage: JanusGraphStorageConfig
+  storage: JanusGraphStorageConfig,
+  indexBackend: JanusGraphIndexBackendConfig
 )
 
-case class SparkPathConfig(dataPath: String)
+case class IDManagerSparkConfig(dataPath: String, clearOnDelete: Boolean)
 
 case class HBaseColumnConfig(tableName: String, cf: String, qualifier: String)
 
-case class IDManagerConfig(spark: SparkPathConfig, hbase: HBaseColumnConfig)
+case class IDManagerConfig(spark: IDManagerSparkConfig, hbase: HBaseColumnConfig)
 
 final case class GrafinkConfiguration(
   reader: ReaderConfig,

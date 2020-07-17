@@ -37,6 +37,8 @@ do
     --duration)
       shift
       VARS="$VARS--duration $1 ";;
+    --delete)
+      VARS="$VARS--delete ";;
     --driver-memory)
       shift
       SPARKVARS="$SPARKVARS--driver-memory $1 ";;

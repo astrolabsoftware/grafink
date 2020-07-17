@@ -85,7 +85,8 @@ object BuildHelper {
         "com.github.mrpowers" % "spark-daria" % sparkDariaVersion,
         "org.janusgraph" % "janusgraph-core" % janusGraphVersion,
         "org.janusgraph" % "janusgraph-hbase" % janusGraphVersion,
-        "org.janusgraph" % "janusgraph-inmemory" % janusGraphVersion
+        "org.janusgraph" % "janusgraph-inmemory" % janusGraphVersion,
+        "org.janusgraph" % "janusgraph-es" % janusGraphVersion
       )
 
   ) ++ basicSettings

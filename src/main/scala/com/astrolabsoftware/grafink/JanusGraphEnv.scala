@@ -25,10 +25,12 @@ import com.astrolabsoftware.grafink.models.JanusGraphConfig
 
 object JanusGraphEnv extends Serializable {
 
-  def releaseGraph: JanusGraph => zio.URIO[Any, ZIO[Logging, Nothing, Unit]] =
+  def releaseGraph: JanusGraph => zio.URIO[Any, Unit] =
     (graph: JanusGraph) =>
-      ZIO
-        .effect(graph.close())
+      (for {
+        _ <- ZIO.effect(graph.tx().commit())
+        _ <- ZIO.effect(graph.close())
+      } yield ())
         .fold(_ => log.error(s"Error closing janusgraph instance"), _ => log.info(s"JanusGraph instance closed"))
 
   def hbaseBasic(config: JanusGraphConfig): ZManaged[Logging, Throwable, JanusGraph] =
@@ -57,41 +59,60 @@ object JanusGraphEnv extends Serializable {
         .set("graph.set-vertex-id", true)
         .open()
 
-  def withHBaseStorage: JanusGraphConfig => JanusGraph =
-    config =>
-      JanusGraphFactory.build
-      // Use hbase as storage backend
-        .set("storage.backend", "hbase")
-        .set("graph.timestamps", TimestampProviders.MILLI)
-        // Configure hbase as storage backend
-        .set("storage.hostname", config.storage.host)
-        // Use the configured table name
-        .set("storage.hbase.table", config.storage.tableName)
-        // Manual transactions
-        .set("storage.transactions", false)
-        // Allow setting vertex ids
-        .set("graph.set-vertex-id", true)
-        .open()
+  def withHBaseStorage: JanusGraphConfig => JanusGraph = { config =>
+    val builder = JanusGraphFactory.build
+    // Use hbase as storage backend
+      .set("storage.backend", "hbase")
+      .set("graph.timestamps", TimestampProviders.MILLI)
+      // Configure hbase as storage backend
+      .set("storage.hostname", config.storage.host)
+      // Use the configured table name
+      .set("storage.hbase.table", config.storage.tableName)
+      // Manual transactions
+      .set("storage.transactions", false)
+      // Allow setting vertex ids
+      .set("graph.set-vertex-id", true)
+    if (config.schema.index.mixed.nonEmpty) {
+      withIndexingBackend(config, builder).open()
+    } else {
+      builder.open()
+    }
+  }
 
-  def withHBaseStorageWithBulkLoad: JanusGraphConfig => JanusGraph =
-    config =>
-      JanusGraphFactory.build
-      // Use hbase as storage backend
-        .set("storage.backend", "hbase")
-        .set("graph.timestamps", TimestampProviders.MILLI)
-        // Configure hbase as storage backend
-        .set("storage.hostname", config.storage.host)
-        // Use the configured table name
-        .set("storage.hbase.table", config.storage.tableName)
-        .set("schema.default", "none")
-        // Manual transactions
-        .set("storage.transactions", false)
-        // Use batch loading
-        .set("storage.batch-loading", true)
-        // Allow setting vertex ids
-        .set("graph.set-vertex-id", true)
-        .open()
+  def withHBaseStorageWithBulkLoad: JanusGraphConfig => JanusGraph = { config =>
+    val builder = JanusGraphFactory.build
+    // Use hbase as storage backend
+      .set("storage.backend", "hbase")
+      .set("graph.timestamps", TimestampProviders.MILLI)
+      // Configure hbase as storage backend
+      .set("storage.hostname", config.storage.host)
+      // Use the configured table name
+      .set("storage.hbase.table", config.storage.tableName)
+      .set("schema.default", "none")
+      // Manual transactions
+      .set("storage.transactions", false)
+      // Use batch loading
+      .set("storage.batch-loading", true)
+      // Allow setting vertex ids
+      .set("graph.set-vertex-id", true)
+    if (config.schema.index.mixed.nonEmpty) {
+      withIndexingBackend(config, builder).open()
+    } else {
+      builder.open()
+    }
+  }
 
-  def withGraph(config: JanusGraphConfig, use: JanusGraph => ZIO[Any, Throwable, Unit]): ZIO[Any, Throwable, Unit] =
+  def withIndexingBackend(config: JanusGraphConfig, builder: JanusGraphFactory.Builder): JanusGraphFactory.Builder = {
+    // Set Indexing backend option, since running with mixed indices
+    val backend     = config.indexBackend
+    val backendName = backend.name
+    builder
+      .set(s"index.$backendName.backend", "elasticsearch")
+      .set(s"index.$backendName.hostname", backend.host)
+      .set(s"index.$backendName.index-name", backend.indexName)
+      .set(s"index.$backendName.elasticsearch.bulk-refresh", "true")
+  }
+
+  def withGraph[R](config: JanusGraphConfig, use: JanusGraph => ZIO[R, Throwable, Unit]): ZIO[R, Throwable, Unit] =
     ZIO.effect(withHBaseStorageWithBulkLoad(config)).bracket(releaseGraph, use)
 }

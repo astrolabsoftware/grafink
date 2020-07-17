@@ -6,7 +6,7 @@ import zio._
 import zio.test._
 import zio.test.Assertion._
 
-import com.astrolabsoftware.grafink.common.PartitionManager
+import com.astrolabsoftware.grafink.common.PaddedPartitionManager
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models.{ Parquet, ReaderConfig }
@@ -28,7 +28,7 @@ object ReaderSpec extends DefaultRunnableSpec {
 
       val app =
         for {
-          df <- Reader.read(PartitionManager(date, 1))
+          df <- Reader.readAndProcess(PaddedPartitionManager(date, 1))
         } yield df.count
 
       val layer = ((logger ++ config ++ sparkLayer) >>> Reader.live) ++ logger
