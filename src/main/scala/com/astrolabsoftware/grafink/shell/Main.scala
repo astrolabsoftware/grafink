@@ -16,12 +16,13 @@
  */
 package com.astrolabsoftware.grafink.shell
 
+import ammonite.runtime.Storage
 import pureconfig.{ CamelCase, ConfigFieldMapping, ConfigReader, ConfigSource }
 import pureconfig.generic.ProductHint
 import pureconfig.generic.auto._
 import pureconfig.generic.semiauto.deriveEnumerationReader
 
-import com.astrolabsoftware.grafink.{ Boot, JanusGraphEnv }
+import com.astrolabsoftware.grafink.Boot
 import com.astrolabsoftware.grafink.BuildInfo
 import com.astrolabsoftware.grafink.models.{ Format, GrafinkConfiguration }
 
@@ -46,12 +47,17 @@ object Main extends App {
     val initCode =
       s"""
          |@ repl.prompt() = "grafink>"
+         |@ println(io.leego.banana.BananaUtils.bananaify("Grafink", "Roman"))
          |@ import com.astrolabsoftware.grafink.shell.QueryHelper._
+         |@ import org.apache.tinkerpop.gremlin.structure._
          |""".stripMargin
     ammonite
       .Main(
         predefCode = initCode,
         remoteLogging = false,
+        // Since file storage is not thread safe and can lead to issues if multiple users login from
+        // the same machine, turning it off
+        storageBackend = Storage.InMemory(),
         welcomeBanner = Some(
           s"" +
             s"Welcome to Grafink Shell ${BuildInfo.version}\nJanusGraphConfig available as janusConfig\nJanusGraph available as graph, traversal as g"
@@ -62,6 +68,8 @@ object Main extends App {
         "graph"       -> graph,
         "g"           -> g
       )
+    g.close()
+    graph.close()
   }
   shell()
 }

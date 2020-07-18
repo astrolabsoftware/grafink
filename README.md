@@ -301,6 +301,77 @@ for eg:
 
 Note that by default grafink runs in ```client``` mode, but this is easily modifiable.
 
+## Grafink Shell
+
+Grafink supports querying the loaded data interactively via REPL shell. It is based off Ammonite REPL
+and comes with all the goodness that Ammonite provides out of the box like multi-line editing, syntax
+highlighting, pretty printing etc.
+Note that Grafink disables autoloading and saving of scripts that is the default mode in Ammonite since
+it is not multi-user friendly, hence all the shell storage is in-memory.
+Grafink adds to Ammonite to provide a preconfigured connection to the desired JanusGraph storage backend
+by simply passing in the same configuration file which was used to load the data into JanusGraph
+
+To run the shell, simply:
+
+```
+./bin/grafink-shell --config conf/application.conf
+```
+
+Here is a snapshot of the welcome screen
+
+```
+
+  .oooooo.                        .o88o.  o8o              oooo        
+ d8P'  `Y8b                       888 `"  `"'              `888        
+888           oooo d8b  .oooo.   o888oo  oooo  ooo. .oo.    888  oooo  
+888           `888""8P `P  )88b   888    `888  `888P"Y88b   888 .8P'   
+888     ooooo  888      .oP"888   888     888   888   888   888888.    
+`88.    .88'   888     d8(  888   888     888   888   888   888 `88b.  
+ `Y8bood8P'   d888b    `Y888""8o o888o   o888o o888o o888o o888o o888o 
+                                                                       
+                                                                       
+                                                                       
+Welcome to Grafink Shell 0.1.0-SNAPSHOT
+JanusGraphConfig available as janusConfig
+JanusGraph available as graph, traversal as g
+grafink>
+
+```
+
+Some sample command executions
+
+```
+grafink>val mgmt = graph.openManagement
+mgmt: org.janusgraph.core.schema.JanusGraphManagement = org.janusgraph.graphdb.database.management.ManagementSystem@1c815814
+
+grafink>mgmt.getGraphIndexes(classOf[Vertex]).asScala.toList
+res3: List[org.janusgraph.core.schema.JanusGraphIndex] = List(objectIdIndex, rfScoreAndcdsx)
+
+grafink>g.V().has("objectId", "ZTF19acmcetc").next()
+res4: Vertex = v[256]
+
+grafink>g.V().count().next()
+632899 [main] WARN  org.janusgraph.graphdb.transaction.StandardJanusGraphTx  - Query requires iterating over all vertices [()]. For better performance, use indexes
+res0: java.lang.Long = 1046L
+
+grafink>g.V().outE("similarity").has("value", 2).asScala.toList
+219832 [main] WARN  org.janusgraph.graphdb.transaction.StandardJanusGraphTx  - Query requires iterating over all vertices [()]. For better performance, use indexes
+res11: List[Edge] = List(
+  e[6rzbi8-mbk-6c5-1fk0][28928-similarity->66816],
+  e[7ghekg-10cg-6c5-2pz4][47104-similarity->126976],
+  e[5fbzls-1edc-6c5-1rsw][65280-similarity->82688],
+  e[6rzb40-1fk0-6c5-mbk][66816-similarity->28928],
+  e[5fbz7k-1rsw-6c5-1edc][82688-similarity->65280],
+  e[21kfeo-296o-6c5-42kg][105216-similarity->189952],
+  e[7ghe68-2pz4-6c5-10cg][126976-similarity->47104],
+  e[21kf0g-42kg-6c5-296o][189952-similarity->105216]
+)
+
+grafink>g.V("28928").outE("similarity").has("value", 2).asScala.toList
+res12: List[Edge] = List(e[6rzbi8-mbk-6c5-1fk0][28928-similarity->66816])
+
+```
+
 ## Benchmarks
 
 Some benchmarks are specified [here](docs/Benchmarks.md)

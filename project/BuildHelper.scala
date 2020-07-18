@@ -30,6 +30,7 @@ object BuildHelper {
   val hbaseVersion = "2.0.5"
   val janusGraphVersion = "0.5.1"
   val ammoniteVersion = "2.1.4"
+  val asciiRenderVersion = "1.3.1"
 
   val scalaTestVersion = "3.1.0"
   val logbackVersion = "1.2.3"
@@ -95,6 +96,7 @@ object BuildHelper {
         "org.janusgraph" % "janusgraph-hbase" % janusGraphVersion,
         "org.janusgraph" % "janusgraph-inmemory" % janusGraphVersion,
         "org.janusgraph" % "janusgraph-es" % janusGraphVersion,
+        "io.leego" % "banana" % asciiRenderVersion,
         ammonite(scalaVersion.value)
       )
   ) ++ basicSettings
