@@ -56,7 +56,7 @@ case class EdgeRulesConfig(similarityClassifer: SimilarityConfig)
 
 case class EdgeLoaderConfig(batchSize: Int, parallelism: Int, taskSize: Int, rules: EdgeRulesConfig)
 
-case class JanusGraphStorageConfig(host: String, port: Int, tableName: String)
+case class JanusGraphStorageConfig(host: String, port: Int, tableName: String, extraConf: List[String])
 
 case class JanusGraphIndexBackendConfig(name: String, indexName: String, host: String)
 

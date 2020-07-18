@@ -21,6 +21,7 @@ import org.janusgraph.diskstorage.util.time.TimestampProviders
 import zio.{ ZIO, ZManaged }
 import zio.logging.{ log, Logging }
 
+import com.astrolabsoftware.grafink.common.Utils._
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
 
 object JanusGraphEnv extends Serializable {
@@ -60,18 +61,22 @@ object JanusGraphEnv extends Serializable {
         .open()
 
   def withHBaseStorage: JanusGraphConfig => JanusGraph = { config =>
-    val builder = JanusGraphFactory.build
-    // Use hbase as storage backend
-      .set("storage.backend", "hbase")
-      .set("graph.timestamps", TimestampProviders.MILLI)
-      // Configure hbase as storage backend
-      .set("storage.hostname", config.storage.host)
-      // Use the configured table name
-      .set("storage.hbase.table", config.storage.tableName)
-      // Manual transactions
-      .set("storage.transactions", false)
-      // Allow setting vertex ids
-      .set("graph.set-vertex-id", true)
+    val builder =
+      withExtraConf(
+        config,
+        JanusGraphFactory.build
+        // Use hbase as storage backend
+          .set("storage.backend", "hbase")
+          .set("graph.timestamps", TimestampProviders.MILLI)
+          // Configure hbase as storage backend
+          .set("storage.hostname", config.storage.host)
+          // Use the configured table name
+          .set("storage.hbase.table", config.storage.tableName)
+          // Manual transactions
+          .set("storage.transactions", false)
+          // Allow setting vertex ids
+          .set("graph.set-vertex-id", true)
+      )
     if (config.schema.index.mixed.nonEmpty) {
       withIndexingBackend(config, builder).open()
     } else {
@@ -80,25 +85,37 @@ object JanusGraphEnv extends Serializable {
   }
 
   def withHBaseStorageWithBulkLoad: JanusGraphConfig => JanusGraph = { config =>
-    val builder = JanusGraphFactory.build
-    // Use hbase as storage backend
-      .set("storage.backend", "hbase")
-      .set("graph.timestamps", TimestampProviders.MILLI)
-      // Configure hbase as storage backend
-      .set("storage.hostname", config.storage.host)
-      // Use the configured table name
-      .set("storage.hbase.table", config.storage.tableName)
-      .set("schema.default", "none")
-      // Manual transactions
-      .set("storage.transactions", false)
-      // Use batch loading
-      .set("storage.batch-loading", true)
-      // Allow setting vertex ids
-      .set("graph.set-vertex-id", true)
+    val builder =
+      withExtraConf(
+        config,
+        JanusGraphFactory.build
+        // Use hbase as storage backend
+          .set("storage.backend", "hbase")
+          .set("graph.timestamps", TimestampProviders.MILLI)
+          // Configure hbase as storage backend
+          .set("storage.hostname", config.storage.host)
+          // Use the configured table name
+          .set("storage.hbase.table", config.storage.tableName)
+          .set("schema.default", "none")
+          // Manual transactions
+          .set("storage.transactions", false)
+          // Use batch loading
+          .set("storage.batch-loading", true)
+          // Allow setting vertex ids
+          .set("graph.set-vertex-id", true)
+      )
     if (config.schema.index.mixed.nonEmpty) {
       withIndexingBackend(config, builder).open()
     } else {
       builder.open()
+    }
+  }
+
+  def withExtraConf(config: JanusGraphConfig, builder: JanusGraphFactory.Builder): JanusGraphFactory.Builder = {
+    val extraConf = config.storage.extraConf.map(c => s"storage.hbase.ext.$c")
+    extraConf.foldLeft(builder) { (b, c) =>
+      val (k, v) = c.splitToTuple("=")
+      b.set(k, v)
     }
   }
 
