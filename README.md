@@ -126,11 +126,13 @@ janusgraph {
       }
     }
   }
-  // JanusGraph storage settings
+  // JanusGraph storage settings, currently using hbase as storage backend
   storage {
     host: "127.0.0.1"
     port: 8182
     tableName = "TestJanusGraph"
+    // Additional configurations to be passed to hbase when opening connection to it
+    extraConf = ["zookeeper.recovery.retry=3", "hbase.client.retries.number=0"]
   }
   // JanusGraph Indexing Backend settings
   indexBackend {
@@ -143,7 +145,7 @@ janusgraph {
   }
 }
 
-// HBase settings since we use it as storage for JanusGraph
+// HBase client settings, in case we use HBase backed IDManager, not being used currently
 hbase {
   zookeeper {
     quoram = "hbase-1.lal.in2p3.fr"
