@@ -14,6 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import org.scalajs.sbtplugin.ScalaJSPlugin
+import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
 import sbt._
 import sbt.Keys._
 import scoverage.ScoverageKeys._
@@ -31,6 +34,9 @@ object BuildHelper {
   val janusGraphVersion = "0.5.1"
   val ammoniteVersion = "2.1.4"
   val asciiRenderVersion = "1.3.1"
+  val scalaJSVersion = "1.0.0"
+  val scalaJSReactVersion = "1.7.2"
+  val scalaTagsVersion = "0.9.1"
 
   val scalaTestVersion = "3.1.0"
   val logbackVersion = "1.2.3"
@@ -62,13 +68,28 @@ object BuildHelper {
     publishArtifact in Test := false
   )
 
-  lazy val basicSettings = Seq(
+  lazy val commonSettings = Seq(
     resolvers ++= Seq(
       "central" at "https://repo1.maven.org/maven2/",
       // For spark daria
       "jitpack" at "https://jitpack.io"
     )
-  ) ++ testSettings
+  )
+
+  lazy val basicSettings = commonSettings ++ testSettings
+
+  val scalaJSSettings = Seq(
+    libraryDependencies ++=
+      Seq(
+        "org.scala-js" %%% "scalajs-dom" % scalaJSVersion,
+        // "com.lihaoyi" %%% "scalatags" % scalaTagsVersion,
+        "com.github.japgolly.scalajs-react" %%% "core" % scalaJSReactVersion
+      ),
+    scalaJSStage := FastOptStage,
+    // requiresDOM := true,
+    // This is an application with a main method
+    scalaJSUseMainModuleInitializer := true
+  )
 
   val stdSettings = Seq(
     parallelExecution in Test := true,
