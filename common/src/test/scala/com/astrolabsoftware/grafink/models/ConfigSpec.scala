@@ -1,10 +1,10 @@
 package com.astrolabsoftware.grafink.models
 
-import zio.test._
+import zio.test.{ DefaultRunnableSpec, _ }
 import zio.test.Assertion._
 
 import com.astrolabsoftware.grafink.logging.Logger
-import com.astrolabsoftware.grafink.models.config.{ Config, GrafinkConfig }
+import com.astrolabsoftware.grafink.models.config.{Config, GrafinkConfig}
 
 object ConfigSpec extends DefaultRunnableSpec {
   def spec: ZSpec[Environment, Failure] =

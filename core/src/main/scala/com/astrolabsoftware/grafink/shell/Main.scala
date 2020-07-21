@@ -22,8 +22,7 @@ import pureconfig.generic.ProductHint
 import pureconfig.generic.auto._
 import pureconfig.generic.semiauto.deriveEnumerationReader
 
-import com.astrolabsoftware.grafink.Boot
-import com.astrolabsoftware.grafink.BuildInfo
+import com.astrolabsoftware.grafink.{ Boot, BuildInfo, QueryHelper }
 import com.astrolabsoftware.grafink.models.{ Format, GrafinkConfiguration }
 
 object Main extends App {

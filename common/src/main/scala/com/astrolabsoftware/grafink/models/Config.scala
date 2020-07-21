@@ -20,8 +20,8 @@ import pureconfig._
 import pureconfig.generic.ProductHint
 import pureconfig.generic.auto._
 import pureconfig.generic.semiauto._
-import zio.{ Has, Task, URIO, ZIO, ZLayer }
-import zio.logging.{ log, Logging }
+import zio._
+import zio.logging.{log, Logging}
 
 case class RenameColumn(f: String, t: String)
 

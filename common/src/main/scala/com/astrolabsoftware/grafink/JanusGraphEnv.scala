@@ -16,12 +16,12 @@
  */
 package com.astrolabsoftware.grafink
 
-import org.janusgraph.core.{ JanusGraph, JanusGraphFactory }
+import org.janusgraph.core.{JanusGraph, JanusGraphFactory}
 import org.janusgraph.diskstorage.util.time.TimestampProviders
-import zio.{ ZIO, ZManaged }
-import zio.logging.{ log, Logging }
+import zio.{ZIO, ZManaged}
+import zio.logging.{log, Logging}
 
-import com.astrolabsoftware.grafink.common.Utils._
+import com.astrolabsoftware.grafink.StringUtils._
 import com.astrolabsoftware.grafink.models.JanusGraphConfig
 
 object JanusGraphEnv extends Serializable {

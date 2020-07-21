@@ -14,9 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.scalajs.sbtplugin.ScalaJSPlugin
-import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
+import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 import sbt._
 import sbt.Keys._
 import scoverage.ScoverageKeys._
@@ -39,6 +38,7 @@ object BuildHelper {
   val scalaTagsVersion = "0.9.1"
 
   val scalaTestVersion = "3.1.0"
+  val uTestVersion = "0.7.4"
   val logbackVersion = "1.2.3"
   val scalaLoggingVersion  = "3.9.2"
 
@@ -68,7 +68,7 @@ object BuildHelper {
     publishArtifact in Test := false
   )
 
-  lazy val commonSettings = Seq(
+  lazy val resolverSettings = Seq(
     resolvers ++= Seq(
       "central" at "https://repo1.maven.org/maven2/",
       // For spark daria
@@ -76,7 +76,24 @@ object BuildHelper {
     )
   )
 
-  lazy val basicSettings = commonSettings ++ testSettings
+  lazy val apiSettings = Seq(
+
+  )
+
+  lazy val commonSettings = resolverSettings ++ testSettings ++ Seq(
+    libraryDependencies ++=
+      Seq(
+        "com.github.pureconfig" %% "pureconfig" % pureConfigVersion,
+        "dev.zio" %% "zio" % zioVersion,
+        "dev.zio" %% "zio-logging-slf4j" % zioLoggingVersion,
+        "org.janusgraph" % "janusgraph-core" % janusGraphVersion,
+        "org.janusgraph" % "janusgraph-hbase" % janusGraphVersion,
+        "org.janusgraph" % "janusgraph-inmemory" % janusGraphVersion,
+        "org.janusgraph" % "janusgraph-es" % janusGraphVersion
+      )
+  )
+
+  // lazy val basicSettings = resolverSettings ++ testSettings
 
   val scalaJSSettings = Seq(
     libraryDependencies ++=
@@ -96,10 +113,7 @@ object BuildHelper {
     libraryDependencies ++=
       Seq(
         "com.github.scopt" %% "scopt" % scoptVersion,
-        "com.github.pureconfig" %% "pureconfig" % pureConfigVersion,
         "com.lihaoyi" %% "fastparse" % fastParseVersion,
-        "dev.zio" %% "zio" % zioVersion,
-        "dev.zio" %% "zio-logging-slf4j" % zioLoggingVersion,
         "org.apache.hbase" % "hbase-client" % hbaseVersion excludeAll(
           ExclusionRule(organization = "junit"),
           ExclusionRule(organization = "org.slf4j"),
@@ -113,12 +127,8 @@ object BuildHelper {
         "org.apache.spark" %% "spark-core" % sparkVersion,
         "org.apache.spark" %% "spark-sql" % sparkVersion,
         "com.github.mrpowers" % "spark-daria" % sparkDariaVersion,
-        "org.janusgraph" % "janusgraph-core" % janusGraphVersion,
-        "org.janusgraph" % "janusgraph-hbase" % janusGraphVersion,
-        "org.janusgraph" % "janusgraph-inmemory" % janusGraphVersion,
-        "org.janusgraph" % "janusgraph-es" % janusGraphVersion,
         "io.leego" % "banana" % asciiRenderVersion,
         ammonite(scalaVersion.value)
       )
-  ) ++ basicSettings
+  ) ++ commonSettings
 }
