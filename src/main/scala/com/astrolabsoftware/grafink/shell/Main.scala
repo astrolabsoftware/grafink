@@ -49,6 +49,7 @@ object Main extends App {
          |@ repl.prompt() = "grafink>"
          |@ println(io.leego.banana.BananaUtils.bananaify("Grafink", "Roman"))
          |@ import com.astrolabsoftware.grafink.shell.QueryHelper._
+         |@ import scala.collection.JavaConverters._
          |@ import org.apache.tinkerpop.gremlin.structure._
          |""".stripMargin
     ammonite
