@@ -275,6 +275,21 @@ sbt ++2.11.11 dist
 
 ### Running Job
 
+Grafink command line can be passed the following parameters
+
+| Parameter | Description | Mandatory | Default value if Not specified |
+|-----------|-------------|-----------|---------------------------|
+|--config|Path to the configuration file|Yes|-|
+|--startdate|Start date for which to run the job in <yyyy-MM-dd> format|No|Yesterday's Date|
+|--duration|Number of days data for which the job will run, starting from startdate|No|1|
+|--num-executors|Spark config passed along to spark submit|No|-|
+|--driver-memory|Spark config passed along to spark submit|No|-|
+|--executor-memory|Spark config passed along to spark submit|No|-|
+|--executor-cores|Spark config passed along to spark submit|No|-|
+|--total-executor-cores|Spark config passed along to spark submit|No|-|
+|--total-executor-cores|Spark config passed along to spark submit|No|-|
+|--conf|Spark config|No|-|
+
 To run locally
 
 ```
