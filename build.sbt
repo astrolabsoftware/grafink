@@ -26,6 +26,8 @@ lazy val root =
     )
 
 assemblyJarName in assembly := s"${name.value}-${version.value}.jar"
+// do not create bash script for discovered main classes
+discoveredMainClasses in Compile := Seq("com.astrolabsoftware.grafink.Boot")
 mainClass in assembly := Some("com.astrolabsoftware.grafink.Boot")
 
 // https://github.com/circe/circe/issues/713
@@ -57,9 +59,16 @@ mappings in Universal := {
 
 // Put conf files inside conf directory in the package
 mappings in Universal ++= {
-
   ((sourceDirectory in Compile).value / "resources" * "*.conf").get.map { f =>
     f -> s"conf/${f.name}"
+  }
+}
+
+mappings in Universal ++= {
+  // pull shell script
+  (sourceDirectory.value / "templates" / "grafink-shell").get.map { f =>
+    f.setExecutable(true)
+    f -> s"bin/${f.name}"
   }
 }
 

@@ -29,10 +29,19 @@ object BuildHelper {
   val scoptVersion = "3.7.1"
   val hbaseVersion = "2.0.5"
   val janusGraphVersion = "0.5.1"
+  val ammoniteVersion = "2.1.4"
+  val asciiRenderVersion = "1.3.1"
 
   val scalaTestVersion = "3.1.0"
   val logbackVersion = "1.2.3"
   val scalaLoggingVersion  = "3.9.2"
+
+  // Helper method to pattern match against the scala version and return the correct ammonite version
+  def ammonite(scalaVersion: String): ModuleID =
+    (scalaVersion match {
+      case "2.11.11"   => "com.lihaoyi" % "ammonite" % "1.6.7-2-c28002d"
+      case _ => "com.lihaoyi" % "ammonite" % ammoniteVersion
+    }) cross CrossVersion.full
 
   lazy val testSettings = Seq(
     libraryDependencies ++= Seq(
@@ -86,8 +95,9 @@ object BuildHelper {
         "org.janusgraph" % "janusgraph-core" % janusGraphVersion,
         "org.janusgraph" % "janusgraph-hbase" % janusGraphVersion,
         "org.janusgraph" % "janusgraph-inmemory" % janusGraphVersion,
-        "org.janusgraph" % "janusgraph-es" % janusGraphVersion
+        "org.janusgraph" % "janusgraph-es" % janusGraphVersion,
+        "io.leego" % "banana" % asciiRenderVersion,
+        ammonite(scalaVersion.value)
       )
-
   ) ++ basicSettings
 }

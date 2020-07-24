@@ -49,7 +49,7 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
           ),
           VertexLoaderConfig(10),
           EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore"))),
-          JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph"),
+          JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph", List.empty),
           JanusGraphIndexBackendConfig("", "", "")
         )
 
@@ -97,7 +97,7 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
           ),
           VertexLoaderConfig(10),
           EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore"))),
-          JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph"),
+          JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph", List.empty),
           JanusGraphIndexBackendConfig("", "", "")
         )
 

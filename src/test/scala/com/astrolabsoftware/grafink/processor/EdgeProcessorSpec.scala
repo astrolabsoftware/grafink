@@ -42,7 +42,7 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
           ),
           VertexLoaderConfig(10),
           EdgeLoaderConfig(10, parallelismConfig, taskSize, EdgeRulesConfig(similarityConfig)),
-          JanusGraphStorageConfig("", 0, tableName = "test"),
+          JanusGraphStorageConfig("", 0, tableName = "test", List.empty),
           JanusGraphIndexBackendConfig("", "", "")
         )
       val parallelism1 = EdgeProcessorLive(janusConfig).getParallelism(3000).partitions
@@ -77,7 +77,7 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
           ),
           VertexLoaderConfig(10),
           EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(similarityConfig)),
-          JanusGraphStorageConfig("", 0, tableName = "test"),
+          JanusGraphStorageConfig("", 0, tableName = "test", List.empty),
           JanusGraphIndexBackendConfig("", "", "")
         )
 
