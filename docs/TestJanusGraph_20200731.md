@@ -1,6 +1,6 @@
 # TestJanusGraph exploration
 
-[2020/07/31] In this note, I explore the `TestJanusGraph` table. I use the grafink-shell (as of commit 9827ccb00aebc3218e1760fa87767357c5fc785f) whenever possible from my laptop (using sshuttle to connect to the remote table). I just updated the configuration file
+[2020/07/31] In this note, I explore the `TestJanusGraph` table. I use the grafink-shell whenever possible from my laptop (using sshuttle to connect to the remote table). I just updated the configuration file
 
 ```diff
 +     host: "hbase-1.lal.in2p3.fr"
@@ -213,7 +213,9 @@ gremlin> g.V().groupCount().by(out("similarity").count()).order(local).by(keys,i
 279:10,280:7,281:4,282:25,283:46,284:13,285:10,286:68,290:1,292:1,357:1]
 ```
 
-Half of the vertices (1689) has no connection (i.e. they have similarity of 0). The most connected vertex has 357 connections. Let's inspect this highly connected vertex:
+![distribution](img/distribution_of_edges_TestJanusGraph_20200731.png)
+
+Half of the vertices (1689) has no connection (i.e. they have similarity of 0). The most connected vertex has 357 connections. We can see clusters around 75, 200 and 275. Let's inspect the most connected vertex:
 
 ```java
 gremlin> g.V().where(out("similarity").count().is(eq(357))).valueMap()
