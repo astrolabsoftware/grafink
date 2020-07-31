@@ -17,7 +17,7 @@ grafink> g.V()
 
 ```
 
-I sometimes encountered difficulty to use gremlin-scala (either limitation in the language, or just lack of documentation to write queries), hence I sometimes fall back to standard gremlin shell.
+I sometimes encountered difficulty to use gremlin java API (either limitation in the language, or just lack of documentation to write queries), hence I sometimes fall back to standard gremlin shell.
 
 ```bash
 /path/to/janusgraph/bin/gremlin.sh
@@ -360,7 +360,7 @@ All connections for `ZTF18aabyhqi` have similarity of 1, that is they come from 
 
 ### Recommendation
 
-Recommendation to better disantangle alerts:
+Recommendation to better disentangle alerts:
  
 - add the column `candid`
 - add the column `candidate.jd`
