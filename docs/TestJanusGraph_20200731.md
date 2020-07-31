@@ -187,6 +187,7 @@ Is that something expected?
 | Catalogued object* | 2 | (false) OR false OR true OR true OR false |
 | Asteroids | 1/2 | (false) OR false OR true/false OR false OR true |
 | Random | 0/1 | (false) OR false OR true/false OR false OR false |
+
 _* A catalogued object is an object already observed that is contained in astronomical catalogs. Typically variable stars that emit alerts perdiodically are in this category (such as ZTF18aaacpwn above)._
 
 So based on this table, we would expect mostly Random, Asteroids, or catalogued objects in this dataset.
@@ -195,10 +196,10 @@ So based on this table, we would expect mostly Random, Asteroids, or catalogued 
 
 ### How many connections each vertex has?
 
-We can compute the distribution of number of connection per vertex:
+We can compute the distribution of number of edges per vertex:
 
 ```java
-// number of connection/vertex : number of vertex with this number of connection/vertex
+// number of edges/vertex : number of vertices with this number of edges/vertex
 gremlin> g.V().groupCount().by(out("similarity").count()).order(local).by(keys,incr)
 ==>[0:1689,1:103,2:15,3:10,4:9,5:14,6:18,8:3,9:11,10:11,11:12,15:1,20:4,21:9,22:8,
 23:1,24:1,25:1,28:1,29:1,31:9,32:7,33:28,34:20,37:1,38:1,39:22,40:16,42:1,44:1,
@@ -366,8 +367,8 @@ Recommendation to better disentangle alerts:
  
 - add the column `candid`
 - add the column `candidate.jd`
-- add the column `magpsf`
-- add the column `sigmapsf`
+- add the column `candidate.magpsf`
+- add the column `candidate.sigmapsf`
 
 Make a better [asteroid algorithm](https://github.com/astrolabsoftware/fink-science/tree/master/fink_science/asteroids) to remove false positive (alerts with CDS classification cannot be asteroid for example).
 
