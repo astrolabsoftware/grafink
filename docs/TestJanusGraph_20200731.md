@@ -21,10 +21,10 @@ I sometimes encountered difficulty to use gremlin java API (either limitation in
 
 ```bash
 /path/to/janusgraph/bin/gremlin.sh
-gremlin>  graph = JanusGraphFactory.build().set("storage.backend", "hbase").set("storage.hostname", "134.158.74.54").set("storage.hbase.table", "TestJanusGraph").open()
-==>standardjanusgraph[hbase:[134.158.74.54]]
+gremlin>  graph = JanusGraphFactory.build().set("storage.backend", "hbase").set("storage.hostname", "xx.xx.xx.xx").set("storage.hbase.table", "TestJanusGraph").open()
+==>standardjanusgraph[hbase:[xx.xx.xx.xx]]
 gremlin> g = graph.traversal()
-==>graphtraversalsource[standardjanusgraph[hbase:[134.158.74.54]], standard]
+==>graphtraversalsource[standardjanusgraph[hbase:[xx.xx.xx.xx]], standard]
 ```
 
 In the following, the default shell is `grafink` but queries starting with `gremlin>` means I am using the default gremlin shell.
