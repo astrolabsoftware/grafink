@@ -16,11 +16,18 @@ before_script:
   - mkdir -p $HOME/.sbt/launchers/1.2.8/
   - curl -L -o $HOME/.sbt/launchers/1.2.8/sbt-launch.jar https://repo.typesafe.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/0.13.16/sbt-launch.jar
 
-script:
-  - echo "Scala version:" $TRAVIS_SCALA_VERSION
-  - sbt ++$TRAVIS_SCALA_VERSION scalastyle coverage test coverageReport
-  # Trick to avoid unnecessary cache updates
-  - find $HOME/.sbt -name "*.lock" | xargs rm
+matrix:
+  include:
+    - scala: 2.11.11
+    script:
+      - sbt ++$TRAVIS_SCALA_VERSION "project core"  scalastyle coverage test coverageReport
+      # Trick to avoid unnecessary cache updates
+      - find $HOME/.sbt -name "*.lock" | xargs rm
+    - scala: 2.12.10
+    script:
+      - sbt ++$TRAVIS_SCALA_VERSION scalastyle coverage test coverageReport
+      # Trick to avoid unnecessary cache updates
+      - find $HOME/.sbt -name "*.lock" | xargs rm
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

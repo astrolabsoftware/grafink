@@ -80,14 +80,6 @@ object PartitionManagerSpec extends DefaultRunnableSpec {
 
         val janusConfig =
           JanusGraphConfig(
-            SchemaConfig(
-              vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
-              vertexLabel = "type",
-              edgeLabels = List(),
-              index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
-            ),
-            VertexLoaderConfig(10),
-            EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig(""))),
             JanusGraphStorageConfig("", 0, tableName = "test", List.empty),
             JanusGraphIndexBackendConfig("", "", "")
           )

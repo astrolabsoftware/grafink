@@ -27,6 +27,9 @@ object GrafinkException {
 
   final case class BadSimilarityExpression(override val error: String) extends GrafinkException(error)
 
+  // API specific
+  final case class ConnectionLimitReachedException(override val error: String) extends GrafinkException(error)
+
   /**
    * Get exit code based on the type of exception
    * @param e

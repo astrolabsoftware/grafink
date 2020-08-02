@@ -2,12 +2,20 @@ import BuildHelper._
 
 name := "grafink"
 
-ThisBuild / scalaVersion     := "2.12.10"
-ThisBuild / version          := "0.1.0-SNAPSHOT"
+lazy val scala212 = "2.12.10"
+lazy val scala211 = "2.11.11"
+lazy val supportedScalaVersions = List(scala212, scala211)
+
+ThisBuild / scalaVersion     := scala212
 ThisBuild / organization     := "com.astrolabsoftware"
 ThisBuild / organizationName := "astrolabsoftware"
 
-scalacOptions ++= Seq("-Ypartial-unification", "-deprecation")
+scalacOptions ++= Seq(
+  "-Ypartial-unification",
+  "-language:higherKinds",
+  "-language:implicitConversions",
+  "-deprecation"
+)
 
 lazy val compileScalastyle = taskKey[Unit]("compileScalastyle")
 compileScalastyle := scalastyle.in(Compile).toTask("").value
@@ -16,8 +24,8 @@ compileScalastyle := scalastyle.in(Compile).toTask("").value
 lazy val api =
   (project in file("api"))
     .settings(
-      // Add support for scala version 2.11
-      crossScalaVersions := Seq("2.11.11", (ThisBuild / scalaVersion).value),
+      buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+      buildInfoPackage := "com.astrolabsoftware.grafink.api",
       apiSettings
     ).dependsOn(common)
 
@@ -25,7 +33,7 @@ lazy val common =
   (project in file("common"))
     .settings(
       // Add support for scala version 2.11
-      crossScalaVersions := Seq("2.11.11", (ThisBuild / scalaVersion).value),
+      crossScalaVersions := supportedScalaVersions,
       commonSettings
     )
 
@@ -33,25 +41,18 @@ lazy val core =
   (project in file("core"))
     .settings(
       // Add support for scala version 2.11
-      crossScalaVersions := Seq("2.11.11", (ThisBuild / scalaVersion).value),
+      crossScalaVersions := supportedScalaVersions,
       buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
       buildInfoPackage := "com.astrolabsoftware.grafink",
       stdSettings
     ).dependsOn(common)
 
-lazy val js =
-  (project in file("js"))
-    .settings(
-      coverageEnabled := false,
-      resolverSettings ++ scalaJSSettings
-    ).enablePlugins(ScalaJSPlugin, ScalaJSBundlerPlugin)
-
 lazy val root = (project in file(".")).settings(
+  crossScalaVersions := Nil,
   skip in publish := true
 ).aggregate(
   api,
-  core,
-  js
+  core
 )
 
 licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))

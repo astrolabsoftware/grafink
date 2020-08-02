@@ -41,24 +41,26 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
         )
       val janusConfig =
         JanusGraphConfig(
-          SchemaConfig(
-            vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
-            vertexLabel = "type",
-            edgeLabels = List(),
-            IndexConfig(
-              composite = List(CompositeIndex(name = objectIdIndex, properties = List("objectId"))),
-              mixed = List.empty,
-              edge = List.empty
-            )
-          ),
-          VertexLoaderConfig(10),
-          EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig(""))),
           JanusGraphStorageConfig("", 0, tableName = "test", List.empty),
           JanusGraphIndexBackendConfig("", "", "")
         )
-
-      val tempDirServiceLayer = ((zio.console.Console.live) >>> TempDirService.test)
-      val runtime             = zio.Runtime.default
+      val jobConfig = GrafinkJobConfig(
+        SchemaConfig(
+          vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
+          vertexLabel = "type",
+          edgeLabels = List(),
+          IndexConfig(
+            composite = List(CompositeIndex(name = objectIdIndex, properties = List("objectId"))),
+            mixed = List.empty,
+            edge = List.empty
+          )
+        ),
+        VertexLoaderConfig(10),
+        EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig("")))
+      )
+      val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
+      val tempDirServiceLayer     = ((zio.console.Console.live) >>> TempDirService.test)
+      val runtime                 = zio.Runtime.default
       val tempDir =
         runtime.unsafeRun(TempDirService.createTempDir.provideLayer(tempDirServiceLayer ++ zio.console.Console.live))
 
@@ -75,11 +77,11 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
               df         <- Reader.readAndProcess(PaddedPartitionManager(date, 1))
               idManager  <- ZIO.access[IDManagerSparkService](_.get)
               vertexData <- idManager.process(df, "")
-              vertexProcessorLive = VertexProcessorLive(janusConfig)
+              vertexProcessorLive = VertexProcessorLive(grafinkJanusGraphConfig)
               dataTypeForVertexPropertyCols = vertexProcessorLive
-                .getDataTypeForVertexProperties(janusConfig.schema.vertexPropertyCols, df)
+                .getDataTypeForVertexProperties(jobConfig.schema.vertexPropertyCols, df)
               _ <- vertexProcessorLive
-                .job(janusConfig, graph, dataTypeForVertexPropertyCols, vertexData.current.collect.toIterator)
+                .job(jobConfig, graph, dataTypeForVertexPropertyCols, vertexData.current.collect.toIterator)
               g = graph.traversal()
               _ <- TempDirService.removeTempDir(tempDir)
             } yield g.V().toList.asScala.map(_.property("objectId").value().toString).toList
@@ -89,7 +91,8 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
       val readerLayer = (logger ++ readerConfig ++ sparkLayer) >>> Reader.live
       val idManagerLayer =
         (logger ++ sparkLayer ++ ((tempDirServiceLayer ++ TestConsole.debug) >>> idManagerConfig)) >>> IDManagerSparkService.live
-      val vertexProcessorLayer = (sparkLayer ++ ZLayer.succeed(janusConfig) ++ logger) >>> VertexProcessor.live
+      val vertexProcessorLayer =
+        (sparkLayer ++ ZLayer.succeed(jobConfig) ++ ZLayer.succeed(janusConfig) ++ logger) >>> VertexProcessor.live
       val layer =
         tempDirServiceLayer ++ TestConsole.debug ++ vertexProcessorLayer ++ idManagerLayer ++ logger ++ readerLayer ++ sparkLayer
 
@@ -106,18 +109,21 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
 
       val janusConfig =
         JanusGraphConfig(
-          SchemaConfig(
-            vertexPropertyCols = List("rfscore", "objectId"),
-            vertexLabel = "type",
-            edgeLabels = List(),
-            index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
-          ),
-          VertexLoaderConfig(1),
-          EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig(""))),
           JanusGraphStorageConfig("", 0, tableName = "test", List.empty),
           JanusGraphIndexBackendConfig("", "", "")
         )
 
+      val jobConfig = GrafinkJobConfig(
+        SchemaConfig(
+          vertexPropertyCols = List("rfscore", "objectId"),
+          vertexLabel = "type",
+          edgeLabels = List(),
+          index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
+        ),
+        VertexLoaderConfig(1),
+        EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig("")))
+      )
+      val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
       val vertexSchema = StructType(
         fields = Array(
           StructField("id", LongType, false),
@@ -157,14 +163,15 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
               for {
                 _ <- ZIO.effect(vertexParams.foreach(v => graph.addVertex(v: _*)))
                 _ <- ZIO.effect(graph.tx.commit())
-                vertexProcessorLive = VertexProcessorLive(janusConfig)
+                vertexProcessorLive = VertexProcessorLive(grafinkJanusGraphConfig)
                 _ <- vertexProcessorLive.deleteJob(graph, verticesToDelete)
               } yield graph.traversal().V().count().toList.asScala.toList.head
           }
       } yield output
 
-      val vertexProcessorLayer = (sparkLayer ++ ZLayer.succeed(janusConfig) ++ logger) >>> VertexProcessor.live
-      val layer                = TestConsole.debug ++ vertexProcessorLayer ++ logger ++ sparkLayer
+      val vertexProcessorLayer =
+        (sparkLayer ++ ZLayer.succeed(jobConfig) ++ ZLayer.succeed(janusConfig) ++ logger) >>> VertexProcessor.live
+      val layer = TestConsole.debug ++ vertexProcessorLayer ++ logger ++ sparkLayer
 
       assertM(app.provideLayer(layer))(equalTo(java.lang.Long.valueOf(1L)))
     }

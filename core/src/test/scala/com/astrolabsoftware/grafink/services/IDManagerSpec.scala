@@ -30,14 +30,6 @@ object IDManagerSpec extends DefaultRunnableSpec {
       val janusConfigLayer =
         ZLayer.succeed(
           JanusGraphConfig(
-            SchemaConfig(
-              List(""),
-              "",
-              List(),
-              IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
-            ),
-            VertexLoaderConfig(10),
-            EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig(""))),
             JanusGraphStorageConfig("", 0, janusGraphTableName, List.empty),
             JanusGraphIndexBackendConfig("", "", "")
           )

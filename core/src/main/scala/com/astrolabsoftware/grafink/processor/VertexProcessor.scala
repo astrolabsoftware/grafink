@@ -28,7 +28,7 @@ import zio.logging.{ log, Logging }
 import com.astrolabsoftware.grafink.JanusGraphEnv.withGraph
 import com.astrolabsoftware.grafink.common.Utils
 import com.astrolabsoftware.grafink.logging.Logger
-import com.astrolabsoftware.grafink.models.JanusGraphConfig
+import com.astrolabsoftware.grafink.models.{ GrafinkJanusGraphConfig, GrafinkJobConfig, JanusGraphConfig }
 import com.astrolabsoftware.grafink.models.config.Config
 
 object VertexProcessor {
@@ -42,11 +42,11 @@ object VertexProcessor {
     def delete(df: DataFrame): ZIO[Logging, Throwable, Unit]
   }
 
-  val live: URLayer[Has[JanusGraphConfig] with Logging, VertexProcessorService] =
+  val live: URLayer[Has[GrafinkJobConfig] with Has[JanusGraphConfig] with Logging, VertexProcessorService] =
     ZLayer.fromEffect(
       for {
-        janusGraphConfig <- Config.janusGraphConfig
-      } yield new VertexProcessorLive(janusGraphConfig)
+        config <- Config.grafinkJanusGraphConfig
+      } yield VertexProcessorLive(config)
     )
 
   def process(df: DataFrame): ZIO[VertexProcessorService with Logging, Throwable, Unit] =
@@ -56,10 +56,10 @@ object VertexProcessor {
     ZIO.accessM(_.get.delete(df))
 }
 
-final case class VertexProcessorLive(config: JanusGraphConfig) extends VertexProcessor.Service {
+final case class VertexProcessorLive(config: GrafinkJanusGraphConfig) extends VertexProcessor.Service {
 
   def job(
-    config: JanusGraphConfig,
+    config: GrafinkJobConfig,
     graph: JanusGraph,
     schema: Map[String, DataType],
     partition: Iterator[Row]
@@ -149,13 +149,14 @@ final case class VertexProcessorLive(config: JanusGraphConfig) extends VertexPro
 
   override def process(df: DataFrame): ZIO[Logging, Throwable, Unit] = {
 
+    val jobConfig                                            = config.job
     val c                                                    = config
-    val vertexProperties                                     = config.schema.vertexPropertyCols
+    val vertexProperties                                     = jobConfig.schema.vertexPropertyCols
     val dataTypeForVertexPropertyCols: Map[String, DataType] = getDataTypeForVertexProperties(vertexProperties, df)
     val jobFunc                                              = job _
 
     def loadFunc: (Iterator[Row]) => Unit = (partition: Iterator[Row]) => {
-      val executorJob = withGraph(c, graph => jobFunc(c, graph, dataTypeForVertexPropertyCols, partition))
+      val executorJob = withGraph(c, graph => jobFunc(jobConfig, graph, dataTypeForVertexPropertyCols, partition))
       zio.Runtime.default.unsafeRun(executorJob)
     }
 

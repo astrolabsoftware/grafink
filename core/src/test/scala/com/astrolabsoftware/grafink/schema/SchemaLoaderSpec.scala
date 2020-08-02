@@ -15,6 +15,7 @@ import com.astrolabsoftware.grafink.models.{
   EdgeLabelConfig,
   EdgeLoaderConfig,
   EdgeRulesConfig,
+  GrafinkJobConfig,
   IndexConfig,
   JanusGraphConfig,
   JanusGraphIndexBackendConfig,
@@ -41,18 +42,20 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
 
       val janusConfig =
         JanusGraphConfig(
-          SchemaConfig(
-            vertexPropertyCols = List("rfscore", "snn"),
-            vertexLabel = "type",
-            edgeLabels = List(EdgeLabelConfig("similarity", Map("key" -> "value", "typ" -> "long"))),
-            index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
-          ),
-          VertexLoaderConfig(10),
-          EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore"))),
           JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph", List.empty),
           JanusGraphIndexBackendConfig("", "", "")
         )
 
+      val jobConfig = GrafinkJobConfig(
+        SchemaConfig(
+          vertexPropertyCols = List("rfscore", "snn"),
+          vertexLabel = "type",
+          edgeLabels = List(EdgeLabelConfig("similarity", Map("key" -> "value", "typ" -> "long"))),
+          index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
+        ),
+        VertexLoaderConfig(10),
+        EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore")))
+      )
       val app =
         for {
           output <- JanusGraphTestEnv.test(janusConfig).use { graph =>
@@ -64,7 +67,7 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
         } yield output
 
       val logger            = Logger.test
-      val schemaLoaderLayer = (ZLayer.succeed(janusConfig) ++ logger) >>> SchemaLoader.live
+      val schemaLoaderLayer = (ZLayer.succeed(jobConfig) ++ ZLayer.succeed(janusConfig) ++ logger) >>> SchemaLoader.live
       val layer             = schemaLoaderLayer ++ logger
       assertM(app.provideLayer(layer))(equalTo(vertexProperties ++ List("value")))
     },
@@ -85,22 +88,23 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
 
       val janusConfig =
         JanusGraphConfig(
-          SchemaConfig(
-            vertexPropertyCols = List("rfscore", "snn", "objectId"),
-            vertexLabel = "type",
-            edgeLabels = List(EdgeLabelConfig(edgeLabel, Map("key" -> "value", "typ" -> "long"))),
-            index = IndexConfig(
-              composite = List(CompositeIndex(name = objectIdIndex, properties = List("objectId"))),
-              mixed = List.empty,
-              edge = List(EdgeIndex(name = similarityIndex, properties = List("value"), label = edgeLabel))
-            )
-          ),
-          VertexLoaderConfig(10),
-          EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore"))),
           JanusGraphStorageConfig("127.0.0.1", 8182, tableName = "TestJanusGraph", List.empty),
           JanusGraphIndexBackendConfig("", "", "")
         )
-
+      val jobConfig = GrafinkJobConfig(
+        SchemaConfig(
+          vertexPropertyCols = List("rfscore", "snn", "objectId"),
+          vertexLabel = "type",
+          edgeLabels = List(EdgeLabelConfig(edgeLabel, Map("key" -> "value", "typ" -> "long"))),
+          index = IndexConfig(
+            composite = List(CompositeIndex(name = objectIdIndex, properties = List("objectId"))),
+            mixed = List.empty,
+            edge = List(EdgeIndex(name = similarityIndex, properties = List("value"), label = edgeLabel))
+          )
+        ),
+        VertexLoaderConfig(10),
+        EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore")))
+      )
       case class IndexResult(name: String, status: SchemaStatus)
 
       val app =
@@ -120,7 +124,7 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
         } yield output
 
       val logger            = Logger.test
-      val schemaLoaderLayer = (ZLayer.succeed(janusConfig) ++ logger) >>> SchemaLoader.live
+      val schemaLoaderLayer = (ZLayer.succeed(jobConfig) ++ ZLayer.succeed(janusConfig) ++ logger) >>> SchemaLoader.live
       val layer             = schemaLoaderLayer ++ logger
       assertM(app.provideLayer(layer))(
         hasSameElementsDistinct(

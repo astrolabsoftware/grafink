@@ -230,7 +230,7 @@ sbt compile
 To compile against scala 2.11
 
 ```
-sbt ++2.11.11 compile
+sbt ++2.11.11 core/compile
 ```
 
 ### Code format
@@ -258,7 +258,7 @@ sbt assembly
 ### Creating Distribution
 
 ```
-sbt dist
+sbt core/dist
 ```
 
 The above creates a deployable zip file `grafink-<version>.zip`. The contents of the zip file are:
@@ -270,7 +270,7 @@ The above creates a deployable zip file `grafink-<version>.zip`. The contents of
 For compiling and packaging against scala 2.11:
 
 ```
-sbt ++2.11.11 dist
+sbt ++2.11.11 core/dist
 ```
 
 ### Running Job

@@ -25,12 +25,11 @@ import org.janusgraph.core.{ JanusGraph, PropertyKey }
 import org.janusgraph.core.Multiplicity._
 import org.janusgraph.core.schema.{ Index, JanusGraphIndex, JanusGraphManagement, SchemaAction }
 import org.janusgraph.core.schema.JanusGraphManagement.IndexJobFuture
-import org.janusgraph.graphdb.database.management.ManagementSystem
 import zio.{ Has, Task, URLayer, ZIO, ZLayer }
 import zio.logging.{ log, Logging }
 
 import com.astrolabsoftware.grafink.common.Utils
-import com.astrolabsoftware.grafink.models.JanusGraphConfig
+import com.astrolabsoftware.grafink.models.{ GrafinkJobConfig, JanusGraphConfig }
 import com.astrolabsoftware.grafink.models.config.Config
 
 /**
@@ -56,29 +55,31 @@ object SchemaLoader {
   ): JanusGraphManagement.IndexBuilder =
     propertyKeys.foldLeft(index)((i, key) => i.addKey(key))
 
-  val live: URLayer[Logging with Has[JanusGraphConfig], SchemaLoaderService] =
+  val live: URLayer[Has[GrafinkJobConfig] with Has[JanusGraphConfig] with Logging, SchemaLoaderService] =
     ZLayer.fromEffect(
       for {
+        jobConfig        <- Config.jobConfig
         janusGraphConfig <- Config.janusGraphConfig
+        schemaConfig = jobConfig.schema
       } yield new Service {
 
         def load(graph: JanusGraph, dataSchema: StructType): ZIO[Logging, Throwable, Unit] = {
-          val edgeLabels = janusGraphConfig.schema.edgeLabels
+          val edgeLabels = jobConfig.schema.edgeLabels
 
-          val vertexPropertyCols = janusGraphConfig.schema.vertexPropertyCols
+          val vertexPropertyCols = schemaConfig.vertexPropertyCols
           val dataTypeForVertexPropertyCols: Map[String, DataType] =
             dataSchema.fields.map(f => f.name -> f.dataType).toMap
 
-          val compositeIndices = janusGraphConfig.schema.index.composite
-          val mixedIndices     = janusGraphConfig.schema.index.mixed
+          val compositeIndices = schemaConfig.index.composite
+          val mixedIndices     = schemaConfig.index.mixed
           val indexBackend     = janusGraphConfig.indexBackend
-          val edgeIndices      = janusGraphConfig.schema.index.edge
+          val edgeIndices      = schemaConfig.index.edge
 
           for {
             // Need to rollback any active transaction since we add indices
             _            <- ZIO.effect(graph.tx.rollback)
             mgmt         <- ZIO.effect(graph.openManagement())
-            vertextLabel <- ZIO.effect(mgmt.makeVertexLabel(janusGraphConfig.schema.vertexLabel).make)
+            vertextLabel <- ZIO.effect(mgmt.makeVertexLabel(schemaConfig.vertexLabel).make)
             // TODO: Detect the data type from input data types
             vertexProperties <- ZIO.effect(
               vertexPropertyCols.map { m =>

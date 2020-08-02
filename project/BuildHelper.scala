@@ -14,8 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
-import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 import sbt._
 import sbt.Keys._
 import scoverage.ScoverageKeys._
@@ -23,6 +21,7 @@ import scoverage.ScoverageKeys._
 object BuildHelper {
 
   val zioVersion = "1.0.0-RC20"
+  val zioCatsVersion = "2.1.4.0-RC17"
   val pureConfigVersion = "0.12.3"
   val fastParseVersion = "2.1.0"
   val zioLoggingVersion = "0.3.0"
@@ -36,6 +35,9 @@ object BuildHelper {
   val scalaJSVersion = "1.0.0"
   val scalaJSReactVersion = "1.7.2"
   val scalaTagsVersion = "0.9.1"
+  val http4sVersion = "1.0.0-M3"
+  val circeVersion = "0.13.0"
+  val kindProjectorPluginVersion = "0.11.0"
 
   val scalaTestVersion = "3.1.0"
   val uTestVersion = "0.7.4"
@@ -77,13 +79,27 @@ object BuildHelper {
   )
 
   lazy val apiSettings = Seq(
-
-  )
+    libraryDependencies ++=
+      Seq(
+        "org.http4s"               %% "http4s-blaze-server" % http4sVersion,
+        "org.http4s"               %% "http4s-circe"        % http4sVersion,
+        "org.http4s"               %% "http4s-dsl"          % http4sVersion,
+        "io.circe"                 %% "circe-core"          % circeVersion,
+        "io.circe"                 %% "circe-generic"       % circeVersion,
+        "dev.zio"                  %% "zio-interop-cats"    % zioCatsVersion,
+        compilerPlugin(
+          ("org.typelevel" % "kind-projector" % kindProjectorPluginVersion).cross(CrossVersion.full)
+        ),
+        // Test
+        "io.circe"                 %% "circe-literal"       % circeVersion % "test",
+      )
+  ) ++ hBaseSettings
 
   lazy val commonSettings = resolverSettings ++ testSettings ++ Seq(
     libraryDependencies ++=
       Seq(
         "com.github.pureconfig" %% "pureconfig" % pureConfigVersion,
+        "com.github.scopt" %% "scopt" % scoptVersion,
         "dev.zio" %% "zio" % zioVersion,
         "dev.zio" %% "zio-logging-slf4j" % zioLoggingVersion,
         "org.janusgraph" % "janusgraph-core" % janusGraphVersion,
@@ -93,27 +109,9 @@ object BuildHelper {
       )
   )
 
-  // lazy val basicSettings = resolverSettings ++ testSettings
-
-  val scalaJSSettings = Seq(
+  lazy val hBaseSettings = Seq(
     libraryDependencies ++=
       Seq(
-        "org.scala-js" %%% "scalajs-dom" % scalaJSVersion,
-        // "com.lihaoyi" %%% "scalatags" % scalaTagsVersion,
-        "com.github.japgolly.scalajs-react" %%% "core" % scalaJSReactVersion
-      ),
-    scalaJSStage := FastOptStage,
-    // requiresDOM := true,
-    // This is an application with a main method
-    scalaJSUseMainModuleInitializer := true
-  )
-
-  val stdSettings = Seq(
-    parallelExecution in Test := true,
-    libraryDependencies ++=
-      Seq(
-        "com.github.scopt" %% "scopt" % scoptVersion,
-        "com.lihaoyi" %% "fastparse" % fastParseVersion,
         "org.apache.hbase" % "hbase-client" % hbaseVersion excludeAll(
           ExclusionRule(organization = "junit"),
           ExclusionRule(organization = "org.slf4j"),
@@ -123,12 +121,20 @@ object BuildHelper {
           ExclusionRule(organization = "junit"),
           ExclusionRule(organization = "org.slf4j"),
           ExclusionRule(organization = "com.fasterxml.jackson.core")
-        ),
+        )
+      )
+  )
+
+  val stdSettings = Seq(
+    parallelExecution in Test := true,
+    libraryDependencies ++=
+      Seq(
+        "com.lihaoyi" %% "fastparse" % fastParseVersion,
         "org.apache.spark" %% "spark-core" % sparkVersion,
         "org.apache.spark" %% "spark-sql" % sparkVersion,
         "com.github.mrpowers" % "spark-daria" % sparkDariaVersion,
         "io.leego" % "banana" % asciiRenderVersion,
         ammonite(scalaVersion.value)
       )
-  ) ++ commonSettings
+  ) ++ commonSettings ++ hBaseSettings
 }

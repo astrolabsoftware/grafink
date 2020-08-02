@@ -23,6 +23,7 @@ import zio._
 import zio.logging.{ log, Logging }
 
 import com.astrolabsoftware.grafink.common.{ PaddedPartitionManager, PartitionManagerImpl, Utils }
+import com.astrolabsoftware.grafink.models.GrafinkJanusGraphConfig
 import com.astrolabsoftware.grafink.models.config._
 import com.astrolabsoftware.grafink.processor.{ EdgeProcessor, VertexProcessor }
 import com.astrolabsoftware.grafink.processor.EdgeProcessor.EdgeProcessorService
@@ -62,12 +63,13 @@ object Job {
   val process: JobTime => ZIO[RunEnv, Throwable, Unit] =
     jobTime =>
       for {
+        jobConfig        <- Config.jobConfig
         janusGraphConfig <- Config.janusGraphConfig
         partitionManager = PaddedPartitionManager(jobTime.day, jobTime.duration)
         // read current data
         df <- Reader.readAndProcess(partitionManager)
         _ <- JanusGraphEnv
-          .hbaseBasic(janusGraphConfig)
+          .hbaseBasic(GrafinkJanusGraphConfig(jobConfig, janusGraphConfig))
           .use(graph =>
             for {
               // load schema
@@ -82,7 +84,7 @@ object Job {
         // Process Edges
         _ <- EdgeProcessor.process(
           vertexData,
-          List(new SimilarityClassifer(janusGraphConfig.edgeLoader.rules.similarityClassifer))
+          List(new SimilarityClassifer(jobConfig.edgeLoader.rules.similarityClassifer))
         )
       } yield ()
 

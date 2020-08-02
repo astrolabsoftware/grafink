@@ -23,7 +23,7 @@ import pureconfig.generic.auto._
 import pureconfig.generic.semiauto.deriveEnumerationReader
 
 import com.astrolabsoftware.grafink.{ Boot, BuildInfo, QueryHelper }
-import com.astrolabsoftware.grafink.models.{ Format, GrafinkConfiguration }
+import com.astrolabsoftware.grafink.models.{ Format, GrafinkConfiguration, GrafinkJanusGraphConfig }
 
 object Main extends App {
 
@@ -40,7 +40,7 @@ object Main extends App {
     }
     val janusConfig = conf.janusgraph
     // Create graph
-    val graph = QueryHelper.getGraph(conf.janusgraph)
+    val graph = QueryHelper.getGraph(GrafinkJanusGraphConfig(conf.job, conf.janusgraph))
     val g     = graph.traversal()
 
     val initCode =

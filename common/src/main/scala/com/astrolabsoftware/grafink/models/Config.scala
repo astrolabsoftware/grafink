@@ -60,12 +60,20 @@ case class JanusGraphStorageConfig(host: String, port: Int, tableName: String, e
 
 case class JanusGraphIndexBackendConfig(name: String, indexName: String, host: String)
 
+case class GrafinkJobConfig(
+   schema: SchemaConfig,
+   vertexLoader: VertexLoaderConfig,
+   edgeLoader: EdgeLoaderConfig
+)
+
 case class JanusGraphConfig(
-  schema: SchemaConfig,
-  vertexLoader: VertexLoaderConfig,
-  edgeLoader: EdgeLoaderConfig,
   storage: JanusGraphStorageConfig,
   indexBackend: JanusGraphIndexBackendConfig
+)
+
+case class GrafinkJanusGraphConfig(
+  job: GrafinkJobConfig,
+  janusGraph: JanusGraphConfig
 )
 
 case class IDManagerSparkConfig(dataPath: String, clearOnDelete: Boolean)
@@ -77,6 +85,7 @@ case class IDManagerConfig(spark: IDManagerSparkConfig, hbase: HBaseColumnConfig
 final case class GrafinkConfiguration(
   reader: ReaderConfig,
   hbase: HBaseConfig,
+  job: GrafinkJobConfig,
   janusgraph: JanusGraphConfig,
   idManager: IDManagerConfig
 )
@@ -87,7 +96,7 @@ package object config {
   implicit def hint[T]: ProductHint[T]          = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
   implicit val formatHint: ConfigReader[Format] = deriveEnumerationReader[Format]
 
-  type GrafinkConfig = Has[ReaderConfig] with Has[HBaseConfig] with Has[JanusGraphConfig] with Has[IDManagerConfig]
+  type GrafinkConfig = Has[ReaderConfig] with Has[HBaseConfig] with Has[GrafinkJobConfig] with Has[JanusGraphConfig] with Has[IDManagerConfig]
 
   object Config {
 
@@ -96,12 +105,18 @@ package object config {
         Task
           .effect(ConfigSource.file(confFile).loadOrThrow[GrafinkConfiguration])
           .tapError(throwable => log.error(s"Loading configuration failed with error: $throwable"))
-          .map(c => Has(c.reader) ++ Has(c.hbase) ++ Has(c.janusgraph) ++ Has(c.idManager))
+          .map(c => Has(c.reader) ++ Has(c.hbase) ++ Has(c.job) ++ Has(c.janusgraph) ++ Has(c.idManager))
       )
 
     val readerConfig: URIO[Has[ReaderConfig], ReaderConfig]             = ZIO.service
     val hbaseConfig: URIO[Has[HBaseConfig], HBaseConfig]                = ZIO.service
+    val jobConfig: URIO[Has[GrafinkJobConfig], GrafinkJobConfig]        = ZIO.service
     val janusGraphConfig: URIO[Has[JanusGraphConfig], JanusGraphConfig] = ZIO.service
     val idManagerConfig: URIO[Has[IDManagerConfig], IDManagerConfig]    = ZIO.service
+    val grafinkJanusGraphConfig: URIO[Has[GrafinkJobConfig] with Has[JanusGraphConfig], GrafinkJanusGraphConfig] =
+      for {
+        jobConf <- jobConfig
+        janusGraphConf <- janusGraphConfig
+      } yield GrafinkJanusGraphConfig(jobConf, janusGraphConf)
   }
 }

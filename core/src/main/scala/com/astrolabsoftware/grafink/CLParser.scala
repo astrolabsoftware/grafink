@@ -43,7 +43,6 @@ trait CLParser {
 
       opt[String]('c', "config")
         .action((x, c) => c.copy(confFile = x))
-        .optional()
         .validate(x =>
           if (new java.io.File(x).exists) success
           else failure("Option --config must be a valid file path")

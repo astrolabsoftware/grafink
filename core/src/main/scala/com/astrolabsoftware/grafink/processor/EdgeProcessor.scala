@@ -25,8 +25,8 @@ import zio._
 import zio.logging.{ log, Logging }
 
 import com.astrolabsoftware.grafink.JanusGraphEnv.withGraph
-import com.astrolabsoftware.grafink.Job.{ SparkEnv, VertexData }
-import com.astrolabsoftware.grafink.models.JanusGraphConfig
+import com.astrolabsoftware.grafink.Job.VertexData
+import com.astrolabsoftware.grafink.models.{ GrafinkJanusGraphConfig, GrafinkJobConfig, JanusGraphConfig }
 import com.astrolabsoftware.grafink.models.config.Config
 import com.astrolabsoftware.grafink.processor.EdgeProcessor.{ EdgeColumns, EdgeStats }
 import com.astrolabsoftware.grafink.processor.edgerules.VertexClassifierRule
@@ -55,11 +55,11 @@ object EdgeProcessor {
   /**
    * Get the EdgeProcessLive instance
    */
-  val live: URLayer[Has[JanusGraphConfig] with Logging, EdgeProcessorService] =
+  val live: URLayer[Has[GrafinkJobConfig] with Has[JanusGraphConfig] with Logging, EdgeProcessorService] =
     ZLayer.fromEffect(
       for {
-        janusGraphConfig <- Config.janusGraphConfig
-      } yield EdgeProcessorLive(janusGraphConfig)
+        config <- Config.grafinkJanusGraphConfig
+      } yield EdgeProcessorLive(config)
     )
 
   /**
@@ -79,7 +79,7 @@ object EdgeProcessor {
  * Loads edge data into JanusGraph
  * @param config
  */
-final case class EdgeProcessorLive(config: JanusGraphConfig) extends EdgeProcessor.Service {
+final case class EdgeProcessorLive(config: GrafinkJanusGraphConfig) extends EdgeProcessor.Service {
 
   override def process(vertexData: VertexData, rules: List[VertexClassifierRule]): ZIO[Logging, Throwable, Unit] =
     for {
@@ -98,7 +98,7 @@ final case class EdgeProcessorLive(config: JanusGraphConfig) extends EdgeProcess
     } yield ()
 
   def job(
-    config: JanusGraphConfig,
+    config: GrafinkJobConfig,
     graph: JanusGraph,
     label: String,
     propertyKey: String,
@@ -148,22 +148,24 @@ final case class EdgeProcessorLive(config: JanusGraphConfig) extends EdgeProcess
   }
 
   def getParallelism(numberOfEdgesToLoad: Int): EdgeStats = {
-    val numPartitions = if (numberOfEdgesToLoad < config.edgeLoader.taskSize) {
-      config.edgeLoader.parallelism
+    val jobConfig = config.job
+    val numPartitions = if (numberOfEdgesToLoad < jobConfig.edgeLoader.taskSize) {
+      jobConfig.edgeLoader.parallelism
     } else {
-      scala.math.max((numberOfEdgesToLoad / config.edgeLoader.taskSize) + 1, config.edgeLoader.parallelism)
+      scala.math.max((numberOfEdgesToLoad / jobConfig.edgeLoader.taskSize) + 1, jobConfig.edgeLoader.parallelism)
     }
     EdgeStats(count = numberOfEdgesToLoad, numPartitions)
   }
 
   override def loadEdges(edges: DataFrame, label: String, propertyKey: String): ZIO[Logging, Throwable, Unit] = {
 
-    val c       = config
-    val jobFunc = job _
+    val jobConfig = config.job
+    val c         = config
+    val jobFunc   = job _
 
     // Add edges to all rows within a partition
     def loadFunc: (Iterator[Row]) => Unit = (partition: Iterator[Row]) => {
-      val executorJob = withGraph(c, graph => jobFunc(c, graph, label, propertyKey, partition))
+      val executorJob = withGraph(c, graph => jobFunc(jobConfig, graph, label, propertyKey, partition))
       zio.Runtime.default.unsafeRun(executorJob)
     }
 
@@ -187,7 +189,8 @@ final case class EdgeProcessorLive(config: JanusGraphConfig) extends EdgeProcess
         )
         .fold(
           f => log.error(s"Error while loading edges $f"),
-          _ => log.info(s"Successfully loaded ${stats.count} edges to graph backed by ${config.storage.tableName}")
+          _ =>
+            log.info(s"Successfully loaded ${stats.count} edges to graph backed by ${c.janusGraph.storage.tableName}")
         )
     } yield ()
   }

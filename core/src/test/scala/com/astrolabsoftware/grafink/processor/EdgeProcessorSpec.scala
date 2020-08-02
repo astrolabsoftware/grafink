@@ -34,19 +34,22 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
       val similarityConfig  = SimilarityConfig("(rfscore AND snnscore) OR objectId")
       val janusConfig =
         JanusGraphConfig(
-          SchemaConfig(
-            vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
-            vertexLabel = "type",
-            edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long"))),
-            index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
-          ),
-          VertexLoaderConfig(10),
-          EdgeLoaderConfig(10, parallelismConfig, taskSize, EdgeRulesConfig(similarityConfig)),
           JanusGraphStorageConfig("", 0, tableName = "test", List.empty),
           JanusGraphIndexBackendConfig("", "", "")
         )
-      val parallelism1 = EdgeProcessorLive(janusConfig).getParallelism(3000).partitions
-      val parallelism2 = EdgeProcessorLive(janusConfig).getParallelism(300000).partitions
+      val jobConfig = GrafinkJobConfig(
+        SchemaConfig(
+          vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
+          vertexLabel = "type",
+          edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long"))),
+          index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
+        ),
+        VertexLoaderConfig(10),
+        EdgeLoaderConfig(10, parallelismConfig, taskSize, EdgeRulesConfig(similarityConfig))
+      )
+      val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
+      val parallelism1            = EdgeProcessorLive(grafinkJanusGraphConfig).getParallelism(3000).partitions
+      val parallelism2            = EdgeProcessorLive(grafinkJanusGraphConfig).getParallelism(300000).partitions
       assert(parallelism1)(equalTo(parallelismConfig)) && assert(parallelism2)(equalTo(121))
     },
     testM("EdgeProcessor will correctly add edges into janusgraph") {
@@ -65,24 +68,26 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
         )
       val janusConfig =
         JanusGraphConfig(
-          SchemaConfig(
-            vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
-            vertexLabel = "type",
-            edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long"))),
-            index = IndexConfig(
-              composite = List.empty,
-              mixed = List.empty,
-              edge = List(EdgeIndex(name = "similarityIndex", properties = List("value"), label = edgeLabel))
-            )
-          ),
-          VertexLoaderConfig(10),
-          EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(similarityConfig)),
           JanusGraphStorageConfig("", 0, tableName = "test", List.empty),
           JanusGraphIndexBackendConfig("", "", "")
         )
-
-      val tempDirServiceLayer = ((zio.console.Console.live) >>> TempDirService.test)
-      val runtime             = zio.Runtime.default
+      val jobConfig = GrafinkJobConfig(
+        SchemaConfig(
+          vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
+          vertexLabel = "type",
+          edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long"))),
+          index = IndexConfig(
+            composite = List.empty,
+            mixed = List.empty,
+            edge = List(EdgeIndex(name = "similarityIndex", properties = List("value"), label = edgeLabel))
+          )
+        ),
+        VertexLoaderConfig(10),
+        EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(similarityConfig))
+      )
+      val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
+      val tempDirServiceLayer     = ((zio.console.Console.live) >>> TempDirService.test)
+      val runtime                 = zio.Runtime.default
       val tempDir =
         runtime.unsafeRun(TempDirService.createTempDir.provideLayer(tempDirServiceLayer ++ zio.console.Console.live))
 
@@ -107,18 +112,18 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
               df         <- Reader.readAndProcess(PaddedPartitionManager(date, 1))
               idManager  <- ZIO.access[IDManagerSparkService](_.get)
               vertexData <- idManager.process(df, "")
-              vertexProcessorLive = VertexProcessorLive(janusConfig)
-              edgeProcessorLive   = EdgeProcessorLive(janusConfig)
+              vertexProcessorLive = VertexProcessorLive(grafinkJanusGraphConfig)
+              edgeProcessorLive   = EdgeProcessorLive(grafinkJanusGraphConfig)
               dataTypeForVertexPropertyCols = vertexProcessorLive
-                .getDataTypeForVertexProperties(janusConfig.schema.vertexPropertyCols, df)
+                .getDataTypeForVertexProperties(jobConfig.schema.vertexPropertyCols, df)
               vertexDataCurrent <- ZIO.effect(vertexData.current.collect.toIterator)
-              _                 <- vertexProcessorLive.job(janusConfig, graph, dataTypeForVertexPropertyCols, vertexDataCurrent)
+              _                 <- vertexProcessorLive.job(jobConfig, graph, dataTypeForVertexPropertyCols, vertexDataCurrent)
               edges = List(
                 new GenericRowWithSchema(Array(1L, 2L, 1), edgeSchema),
                 new GenericRowWithSchema(Array(2L, 3L, 5), edgeSchema),
                 new GenericRowWithSchema(Array(2L, 4L, 3), edgeSchema)
               ).toIterator
-              _ <- edgeProcessorLive.job(janusConfig, graph, edgeLabel, edgePropertyKey, edges)
+              _ <- edgeProcessorLive.job(jobConfig, graph, edgeLabel, edgePropertyKey, edges)
               g = graph.traversal()
             } yield {
               // Get vertices associated with edge similarity = 5,
@@ -138,7 +143,8 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
       val readerLayer = (logger ++ readerConfig ++ sparkLayer) >>> Reader.live
       val idManagerLayer =
         (logger ++ sparkLayer ++ ((tempDirServiceLayer ++ TestConsole.debug) >>> idManagerConfig)) >>> IDManagerSparkService.live
-      val vertexProcessorLayer = (sparkLayer ++ ZLayer.succeed(janusConfig) ++ logger) >>> VertexProcessor.live
+      val vertexProcessorLayer =
+        (sparkLayer ++ ZLayer.succeed(jobConfig) ++ ZLayer.succeed(janusConfig) ++ logger) >>> VertexProcessor.live
       val layer =
         tempDirServiceLayer ++ TestConsole.debug ++ vertexProcessorLayer ++ idManagerLayer ++ logger ++ readerLayer ++ sparkLayer
 
