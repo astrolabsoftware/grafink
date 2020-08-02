@@ -30,7 +30,7 @@ matrix:
       - find $HOME/.sbt -name "*.lock" | xargs rm
 
 script:
- - echo "Scala version:" $TRAVIS_SCALA_VERSION
+  - echo "Scala version:" $TRAVIS_SCALA_VERSION
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
