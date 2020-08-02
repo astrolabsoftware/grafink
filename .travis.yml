@@ -29,6 +29,10 @@ matrix:
         # Trick to avoid unnecessary cache updates
         - find $HOME/.sbt -name "*.lock" | xargs rm
 
+script:
+  # This will avoid triggering the default script sbt ++$TRAVIS_SCALA_VERSION test from travis 
+  - echo "no op"
+
 after_success:
   - bash <(curl -s https://codecov.io/bash)
 
