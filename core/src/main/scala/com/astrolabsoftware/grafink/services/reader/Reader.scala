@@ -76,9 +76,9 @@ object Reader {
           for {
             df <- read(basePath, partitionManager)
             colsToSelectNames = config.keepCols ++ PartitionManager.partitionColumns
-            colsToSelect = colsToSelectNames.map(col)
-            colsRenamed  = config.keepColsRenamed.map(c => col(c.f).as(c.t))
-            newCols = config.newCols.map(c => col(c.name))
+            colsToSelect      = colsToSelectNames.map(col)
+            colsRenamed       = config.keepColsRenamed.map(c => col(c.f).as(c.t))
+            newCols           = config.newCols.map(c => col(c.name))
             dfPruned <- if (newCols.nonEmpty) {
               // If we are adding new columns
               val selectNewCols = config.newCols.map(_.expr).mkString(", ")
@@ -89,7 +89,9 @@ object Reader {
                 _ <- ZIO.effect(dfWithRenamedCols.createOrReplaceTempView("grafink_raw"))
                 // select cols to select and renamed cols
                 selectCols = (colsToSelectNames ++ config.keepColsRenamed.map(_.t)).mkString(", ")
-                dfWithNewCols <- ZIO.effect(df.sparkSession.sqlContext.sql(s"SELECT $selectCols, $selectNewCols FROM grafink_raw"))
+                dfWithNewCols <- ZIO.effect(
+                  df.sparkSession.sqlContext.sql(s"SELECT $selectCols, $selectNewCols FROM grafink_raw")
+                )
               } yield dfWithNewCols
             } else {
               ZIO.succeed(df.select(colsToSelect ++ colsRenamed: _*))

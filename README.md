@@ -385,6 +385,48 @@ res11: List[Edge] = List(
 grafink>g.V("28928").outE("similarity").has("value", 2).asScala.toList
 res12: List[Edge] = List(e[6rzbi8-mbk-6c5-1fk0][28928-similarity->66816])
 
+grafink>val mgmt = graph.openManagement
+grafink>show(mgmt.printSchema)
+"""------------------------------------------------------------------------------------------------
+Vertex Label Name              | Partitioned | Static                                             |
+---------------------------------------------------------------------------------------------------
+alert                          | false       | false                                              |
+---------------------------------------------------------------------------------------------------
+Edge Label Name                | Directed    | Unidirected | Multiplicity                         |
+---------------------------------------------------------------------------------------------------
+similarity                     | true        | false       | MULTI                                |
+---------------------------------------------------------------------------------------------------
+Property Key Name              | Cardinality | Data Type                                          |
+---------------------------------------------------------------------------------------------------
+rfscore                        | SINGLE      | class java.lang.Double                             |
+snnscore                       | SINGLE      | class java.lang.Double                             |
+mulens_class_1                 | SINGLE      | class java.lang.String                             |
+mulens_class_2                 | SINGLE      | class java.lang.String                             |
+cdsxmatch                      | SINGLE      | class java.lang.String                             |
+roid                           | SINGLE      | class java.lang.Integer                            |
+classtar                       | SINGLE      | class java.lang.Float                              |
+objectId                       | SINGLE      | class java.lang.String                             |
+rowkey                         | SINGLE      | class java.lang.String                             |
+candid                         | SINGLE      | class java.lang.Long                               |
+jd                             | SINGLE      | class java.lang.Double                             |
+magpsf                         | SINGLE      | class java.lang.Float                              |
+sigmapsf                       | SINGLE      | class java.lang.Float                              |
+value                          | SINGLE      | class java.lang.Integer                            |
+---------------------------------------------------------------------------------------------------
+Vertex Index Name              | Type        | Unique    | Backing        | Key:           Status |
+---------------------------------------------------------------------------------------------------
+objectIdIndex                  | Composite   | false     | internalindex  | objectId:     ENABLED |
+rowkeyIndex                    | Composite   | false     | internalindex  | rowkey:       ENABLED |
+---------------------------------------------------------------------------------------------------
+Edge Index (VCI) Name          | Type        | Unique    | Backing        | Key:           Status |
+---------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
+Relation Index                 | Type        | Direction | Sort Key       | Order    |     Status |
+---------------------------------------------------------------------------------------------------
+similarityIndex                | similarity  | BOTH      | value          | asc      |    ENABLED |
+---------------------------------------------------------------------------------------------------
+"""
+
 ```
 
 ## Benchmarks

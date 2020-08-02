@@ -61,7 +61,7 @@ object Boot extends App {
           config <- ZIO.access[ApiConfig](_.get)
           _      <- logging.log.info(s"Running with $config")
           httpApp = Router[ApiTask](
-            "/" -> MgmtService.routes(config.janusgraph)
+            "/" -> MgmtService(config.janusgraph).routes
           ).orNotFound
 
           exitCode <- runHttp(httpApp, config.app.port)
