@@ -43,12 +43,14 @@ object Main extends App {
     val graph = QueryHelper.getGraph(GrafinkJanusGraphConfig(conf.job, conf.janusgraph))
     val g     = graph.traversal()
 
+    // scalastyle:off
     val initCode =
       s"""
          |@ repl.prompt() = "grafink>"
          |@ println(io.leego.banana.BananaUtils.bananaify("Grafink", "Roman"))
          |@ import scala.collection.JavaConverters._, com.astrolabsoftware.grafink.QueryHelper._, org.janusgraph.core._, org.apache.tinkerpop.gremlin.structure._
          |""".stripMargin
+    // scalastyle:on
     ammonite
       .Main(
         predefCode = initCode,

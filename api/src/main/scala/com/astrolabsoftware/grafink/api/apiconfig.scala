@@ -2,9 +2,9 @@ package com.astrolabsoftware.grafink.api
 
 import pureconfig._
 import pureconfig.ConfigSource
+import pureconfig.generic.ProductHint
 import pureconfig.generic.auto._
 import pureconfig.generic.semiauto._
-import pureconfig.generic.ProductHint
 import zio.{ Has, Task, ZLayer }
 
 import com.astrolabsoftware.grafink.models.GrafinkApiConfiguration
