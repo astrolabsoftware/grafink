@@ -46,6 +46,7 @@ object MgmtService {
             )
             mgmt         = graph.openManagement()
             vertexLabels = mgmt.getVertexLabels.asScala.toList.map(n => n.name)
+            _ <- ZIO.effect(mgmt.commit())
           } yield InfoResponse(vertexLabels)
           response.catchAll(t => ZIO.succeed(InfoResponse(List.empty, error = Some(s"$t"))))
           Ok(response)

@@ -25,7 +25,9 @@ import zio.logging.{log, Logging}
 
 case class RenameColumn(f: String, t: String)
 
-case class ReaderConfig(basePath: String, format: Format, keepCols: List[String], keepColsRenamed: List[RenameColumn])
+case class NewColumn(name: String, expr: String)
+
+case class ReaderConfig(basePath: String, format: Format, keepCols: List[String], keepColsRenamed: List[RenameColumn], newCols: List[NewColumn] = List.empty)
 
 case class HBaseZookeeperConfig(quoram: String)
 

@@ -75,9 +75,25 @@ object Reader {
         override def readAndProcess(basePath: String, partitionManager: PartitionManager): RIO[Logging, DataFrame] =
           for {
             df <- read(basePath, partitionManager)
-            colsToSelect = config.keepCols.map(col(_)) ++ PartitionManager.partitionColumns.map(col)
+            colsToSelectNames = config.keepCols ++ PartitionManager.partitionColumns
+            colsToSelect = colsToSelectNames.map(col)
             colsRenamed  = config.keepColsRenamed.map(c => col(c.f).as(c.t))
-            dfPruned     = df.select(colsToSelect ++ colsRenamed: _*)
+            newCols = config.newCols.map(c => col(c.name))
+            dfPruned <- if (newCols.nonEmpty) {
+              // If we are adding new columns
+              val selectNewCols = config.newCols.map(_.expr).mkString(", ")
+              // since new cols might depend on renamed cols, first select them
+              val dfWithRenamedCols = df.select(col("*") :: colsRenamed: _*)
+              for {
+                // Create a temp table to run sql
+                _ <- ZIO.effect(dfWithRenamedCols.createOrReplaceTempView("grafink_raw"))
+                // select cols to select and renamed cols
+                selectCols = (colsToSelectNames ++ config.keepColsRenamed.map(_.t)).mkString(", ")
+                dfWithNewCols <- ZIO.effect(df.sparkSession.sqlContext.sql(s"SELECT $selectCols, $selectNewCols FROM grafink_raw"))
+              } yield dfWithNewCols
+            } else {
+              ZIO.succeed(df.select(colsToSelect ++ colsRenamed: _*))
+            }
           } yield dfPruned
 
         override def readAndProcess(partitionManager: PartitionManager): RIO[Logging, DataFrame] =
