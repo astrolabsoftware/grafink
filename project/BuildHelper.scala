@@ -93,7 +93,7 @@ object BuildHelper {
         // Test
         "io.circe"                 %% "circe-literal"       % circeVersion % "test",
       )
-  ) ++ hBaseSettings
+  ) ++ commonSettings ++ hBaseSettings
 
   lazy val commonSettings = resolverSettings ++ testSettings ++ Seq(
     libraryDependencies ++=
