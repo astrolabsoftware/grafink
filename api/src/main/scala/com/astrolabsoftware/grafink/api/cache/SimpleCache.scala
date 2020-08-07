@@ -1,11 +1,13 @@
 package com.astrolabsoftware.grafink.api.cache
 
+import java.util.concurrent.ConcurrentHashMap
+
 import org.janusgraph.core.JanusGraph
 import zio.{ IO, Ref, UIO, ZRef }
 
 import com.astrolabsoftware.grafink.models.GrafinkException.ConnectionLimitReachedException
 
-class SimpleCache(private val capacity: Int, private val mapRef: Ref[java.util.HashMap[String, JanusGraph]]) {
+class SimpleCache(private val capacity: Int, private val mapRef: Ref[ConcurrentHashMap[String, JanusGraph]]) {
 
   def get(key: String): IO[Throwable, Option[JanusGraph]] =
     for {
@@ -33,7 +35,7 @@ object SimpleCache {
 
   def make(capacity: Int): UIO[SimpleCache] =
     for {
-      c <- ZRef.make(new java.util.HashMap[String, JanusGraph](capacity))
+      c <- ZRef.make(new java.util.concurrent.ConcurrentHashMap[String, JanusGraph](capacity))
     } yield {
       new SimpleCache(capacity, c)
     }

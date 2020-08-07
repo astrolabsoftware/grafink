@@ -60,6 +60,10 @@ object JanusGraphEnv extends Serializable {
         .set("graph.set-vertex-id", true)
         .open()
 
+  /**
+   * Read only mode for graph instance
+   * @return
+   */
   def withHBaseStorageRead: JanusGraphConfig => JanusGraph = { config =>
     val builder =
       withExtraConf(
@@ -74,8 +78,10 @@ object JanusGraphEnv extends Serializable {
           .set("storage.hbase.table", config.storage.tableName)
           // Manual transactions
           .set("storage.transactions", false)
+          // Read only access
+          .set("storage.read-only", true)
       )
-      withIndexingBackend(config, builder).open()
+      if (config.indexBackend.host.isEmpty) builder.open() else withIndexingBackend(config, builder).open()
   }
 
   def withHBaseStorage: GrafinkJanusGraphConfig => JanusGraph = { config =>
