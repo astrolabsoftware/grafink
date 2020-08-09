@@ -18,4 +18,4 @@ package com.astrolabsoftware.grafink.models
 
 case class GrafinkApiConfiguration(app: AppConfig, janusgraph: JanusGraphConfig)
 
-case class AppConfig(port: Int)
+case class AppConfig(port: Int, cacheSize: Int)

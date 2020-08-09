@@ -21,9 +21,10 @@ import org.janusgraph.core.JanusGraph
 import zio._
 import zio.logging.{ log, Logging }
 
+import com.astrolabsoftware.grafink.api.apiconfig
 import com.astrolabsoftware.grafink.api.cache.SimpleCache
 import com.astrolabsoftware.grafink.models.GrafinkException.ConnectionLimitReachedException
-import com.astrolabsoftware.grafink.models.JanusGraphConfig
+import com.astrolabsoftware.grafink.models.{ AppConfig, JanusGraphConfig }
 
 object JanusGraphConnectionManager {
 
@@ -41,9 +42,12 @@ object JanusGraphConnectionManager {
     ): ZIO[Logging, Throwable, JanusGraph]
   }
 
-  val live: Int => ZLayer[Logging, IllegalArgumentException, JanusGraphConnManagerService] = capacity =>
+  val live: ZLayer[Has[AppConfig] with Logging, IllegalArgumentException, JanusGraphConnManagerService] =
     ZLayer.fromEffect {
-      SimpleCache.make(capacity).map { cache =>
+      for {
+        config <- apiconfig.APIConfig.appConfig
+        cache  <- SimpleCache.make(config.cacheSize)
+      } yield {
         new Service {
           override def getOrCreateGraphInstance(
             janusGraphConfig: JanusGraphConfig

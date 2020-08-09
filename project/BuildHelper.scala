@@ -20,7 +20,7 @@ import scoverage.ScoverageKeys._
 
 object BuildHelper {
 
-  val zioVersion = "1.0.0-RC20"
+  val zioVersion = "1.0.0-RC21-2"
   val zioCatsVersion = "2.1.4.0-RC17"
   val pureConfigVersion = "0.12.3"
   val fastParseVersion = "2.1.0"

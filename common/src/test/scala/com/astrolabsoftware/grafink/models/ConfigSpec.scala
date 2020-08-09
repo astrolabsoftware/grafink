@@ -38,16 +38,17 @@ object ConfigSpec extends DefaultRunnableSpec {
         val cfg = Config.hbaseConfig
         assertM(cfg.provideLayer(layer))(equalTo(HBaseConfig(HBaseZookeeperConfig(quoram = "localhost"))))
       },
-      testM("JanusGraphConfig is parsed correctly") {
-
+      testM("GrafinkJanusGraphConfig is parsed correctly") {
         val path = getClass.getResource("/application.conf").getPath
 
         val layer = Logger.test >>> Config.live(path)
 
-        val cfg = Config.janusGraphConfig
+        val cfg = Config.grafinkJanusGraphConfig
+
         assertM(cfg.provideLayer(layer))(
           equalTo(
-            JanusGraphConfig(
+          GrafinkJanusGraphConfig(
+            GrafinkJobConfig(
               SchemaConfig(
                 vertexPropertyCols = List("rfscore", "snnscore"),
                 vertexLabel = "type",
@@ -59,7 +60,9 @@ object ConfigSpec extends DefaultRunnableSpec {
                 )
               ),
               VertexLoaderConfig(10),
-              EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore OR objectId"))),
+              EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore OR objectId")))
+            ),
+            JanusGraphConfig(
               JanusGraphStorageConfig(
                 "127.0.0.1",
                 8182,
@@ -68,7 +71,7 @@ object ConfigSpec extends DefaultRunnableSpec {
               ),
               JanusGraphIndexBackendConfig("elastic", "elastictest", "127.0.0.1:9200")
             )
-          )
+          ))
         )
       },
       testM("Invalid config file throws") {

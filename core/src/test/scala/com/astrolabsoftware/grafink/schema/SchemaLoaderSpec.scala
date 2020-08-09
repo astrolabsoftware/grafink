@@ -9,21 +9,7 @@ import zio.test.{ DefaultRunnableSpec, _ }
 import zio.test.Assertion._
 
 import com.astrolabsoftware.grafink.logging.Logger
-import com.astrolabsoftware.grafink.models.{
-  CompositeIndex,
-  EdgeIndex,
-  EdgeLabelConfig,
-  EdgeLoaderConfig,
-  EdgeRulesConfig,
-  GrafinkJobConfig,
-  IndexConfig,
-  JanusGraphConfig,
-  JanusGraphIndexBackendConfig,
-  JanusGraphStorageConfig,
-  SchemaConfig,
-  SimilarityConfig,
-  VertexLoaderConfig
-}
+import com.astrolabsoftware.grafink.models._
 import com.astrolabsoftware.grafink.utils.JanusGraphTestEnv
 
 object SchemaLoaderSpec extends DefaultRunnableSpec {

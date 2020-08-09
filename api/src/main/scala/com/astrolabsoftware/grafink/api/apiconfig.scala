@@ -21,23 +21,26 @@ import pureconfig.ConfigSource
 import pureconfig.generic.ProductHint
 import pureconfig.generic.auto._
 import pureconfig.generic.semiauto._
-import zio.{ Has, Task, ZLayer }
+import zio.{ Has, Task, URIO, ZIO, ZLayer }
 
-import com.astrolabsoftware.grafink.models.GrafinkApiConfiguration
+import com.astrolabsoftware.grafink.models.{ AppConfig, GrafinkApiConfiguration, JanusGraphConfig }
 
 package object apiconfig {
 
   // For pure config to be able to use camel case
   implicit def hint[T]: ProductHint[T] = ProductHint[T](ConfigFieldMapping(CamelCase, CamelCase))
 
-  type ApiConfig = Has[GrafinkApiConfiguration]
+  type ApiConfig = Has[AppConfig] with Has[JanusGraphConfig]
 
   object APIConfig {
     val live: String => ZLayer[Any, Throwable, ApiConfig] = confFile =>
-      ZLayer.fromEffect(
+      ZLayer.fromEffectMany(
         Task
           .effect(ConfigSource.file(confFile).loadOrThrow[GrafinkApiConfiguration])
           .mapError(failures => new IllegalStateException(s"Error loading configuration: $failures"))
+          .map(c => Has(c.app) ++ Has(c.janusgraph))
       )
+
+    val appConfig: URIO[Has[AppConfig], AppConfig] = ZIO.service
   }
 }

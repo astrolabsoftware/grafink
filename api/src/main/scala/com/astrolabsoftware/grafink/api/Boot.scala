@@ -29,15 +29,17 @@ import zio.interop.catz._
 import zio.logging.Logging
 
 import com.astrolabsoftware.grafink.api.apiconfig.{ APIConfig, ApiConfig }
-import com.astrolabsoftware.grafink.api.service.{ JanusGraphConnectionManager, MgmtService }
+import com.astrolabsoftware.grafink.api.service.{ InfoService, JanusGraphConnectionManager }
+import com.astrolabsoftware.grafink.api.service.InfoService.InfoService
 import com.astrolabsoftware.grafink.api.service.JanusGraphConnectionManager.JanusGraphConnManagerService
 import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models.GrafinkException
 import com.astrolabsoftware.grafink.models.GrafinkException.BadArgumentsException
+import com.astrolabsoftware.grafink.models.config.Config
 
 object Boot extends App {
 
-  type AppEnv     = ApiConfig with JanusGraphConnManagerService with Blocking with Logging
+  type AppEnv     = ApiConfig with JanusGraphConnManagerService with InfoService with Blocking with Logging
   type ApiTask[A] = RIO[AppEnv with zio.clock.Clock, A]
 
   /**
@@ -58,19 +60,21 @@ object Boot extends App {
     val program = parseArgs(args) match {
       case Some(argsConfig) =>
         val server = for {
-          config <- ZIO.access[ApiConfig](_.get)
-          _      <- logging.log.info(s"Running with $config")
+          appConfig   <- APIConfig.appConfig
+          janusConfig <- Config.janusGraphConfig
+          _           <- logging.log.info(s"Running with $appConfig")
           httpApp = Router[ApiTask](
-            "/" -> MgmtService(config.janusgraph).routes
+            "/" -> MgmtApi(janusConfig).routes
           ).orNotFound
 
-          exitCode <- runHttp(httpApp, config.app.port)
+          exitCode <- runHttp(httpApp, appConfig.port)
 
         } yield exitCode
 
+        val configLayer                      = APIConfig.live(argsConfig.confFile)
+        val janusGraphConnectionManagerLayer = (configLayer ++ Logger.live) >>> JanusGraphConnectionManager.live
         val layers =
-          Blocking.any ++ Logger.live ++ APIConfig.live(argsConfig.confFile) ++ ((Logger.live) >>> JanusGraphConnectionManager
-            .live(100))
+          Blocking.any ++ Logger.live ++ configLayer ++ janusGraphConnectionManagerLayer ++ InfoService.live
         server.provideSomeLayer[ZEnv](layers).orDie
       case None =>
         ZIO.fail(BadArgumentsException("Invalid command line arguments"))
