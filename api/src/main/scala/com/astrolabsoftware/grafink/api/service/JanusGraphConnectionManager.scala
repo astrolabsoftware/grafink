@@ -23,8 +23,8 @@ import zio.logging.{ log, Logging }
 
 import com.astrolabsoftware.grafink.api.apiconfig
 import com.astrolabsoftware.grafink.api.cache.SimpleCache
-import com.astrolabsoftware.grafink.models.GrafinkException.ConnectionLimitReachedException
 import com.astrolabsoftware.grafink.models.{ AppConfig, JanusGraphConfig }
+import com.astrolabsoftware.grafink.models.GrafinkException.ConnectionLimitReachedException
 
 object JanusGraphConnectionManager {
 
