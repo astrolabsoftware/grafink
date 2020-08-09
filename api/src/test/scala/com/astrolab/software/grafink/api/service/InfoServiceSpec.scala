@@ -1,6 +1,6 @@
 package com.astrolab.software.grafink.api.service
 
-import org.apache.tinkerpop.gremlin.structure.{ Direction, Vertex }
+import org.apache.tinkerpop.gremlin.structure.{ Direction, Edge, Vertex }
 import org.apache.tinkerpop.gremlin.structure.VertexProperty.Cardinality
 import org.janusgraph.core.Multiplicity.MULTI
 import org.janusgraph.core.schema.SchemaAction
@@ -21,6 +21,7 @@ object InfoServiceSpec extends DefaultRunnableSpec {
       val edgeLabel       = "similarity"
       val objectIdIndex   = "objectIdIndex"
       val similarityIndex = "similarityIndex"
+      val valueIndex      = "valueIndex"
       val vertexLabel     = "alert"
       val vertexPropertyCols =
         List(("rfscore", classOf[java.lang.Double]), ("snn", classOf[java.lang.Double]), ("objectId", classOf[String]))
@@ -55,20 +56,26 @@ object InfoServiceSpec extends DefaultRunnableSpec {
                     .make
                 )
                 _ <- ZIO.effect(mgmt.addProperties(eLabel, eProperty))
-                // Add index
+                // Add index on vertex property
                 objectIdPropertyKey = vertexProperties.filter(x => x.name == "objectId").head
                 index1 <- ZIO.effect(
                   mgmt.buildIndex(objectIdIndex, classOf[Vertex]).addKey(objectIdPropertyKey).buildCompositeIndex()
                 )
 
-                // Add edge index
+                // Add index on edge property
+                index2 <- ZIO.effect(
+                  mgmt.buildIndex(valueIndex, classOf[Edge]).addKey(eProperty).buildCompositeIndex()
+                )
+
+                // Add relation index
                 edgeLabelV <- ZIO.effect(mgmt.getEdgeLabel(edgeLabel))
-                index2     <- ZIO.effect(mgmt.buildEdgeIndex(edgeLabelV, similarityIndex, Direction.BOTH, eProperty))
+                index3     <- ZIO.effect(mgmt.buildEdgeIndex(edgeLabelV, similarityIndex, Direction.BOTH, eProperty))
                 _          <- ZIO.effect(mgmt.commit())
 
                 // enable Index
                 mgmt <- ZIO.effect(graph.openManagement())
                 _    <- ZIO.effect(mgmt.updateIndex(mgmt.getGraphIndex(index1.name()), SchemaAction.ENABLE_INDEX))
+                _    <- ZIO.effect(mgmt.updateIndex(mgmt.getGraphIndex(index2.name()), SchemaAction.ENABLE_INDEX))
                 _    <- ZIO.effect(mgmt.commit())
 
                 // Get schema
@@ -95,7 +102,9 @@ object InfoServiceSpec extends DefaultRunnableSpec {
             vertexIndexes = List(
               VertexIndexInfo(objectIdIndex, "Composite", false, "internalindex", List("objectId:ENABLED"))
             ),
-            edgeIndexes = List.empty,
+            edgeIndexes = List(
+              EdgeIndexInfo(valueIndex, "Composite", false, "internalindex", List("value:ENABLED"))
+            ),
             relationIndexes = List(
               RelationIndexInfo(similarityIndex, edgeLabel, "BOTH", "value", "asc", "ENABLED")
             )

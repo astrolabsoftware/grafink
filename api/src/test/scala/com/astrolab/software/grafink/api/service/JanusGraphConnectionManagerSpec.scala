@@ -15,6 +15,7 @@ import com.astrolabsoftware.grafink.models.{
   JanusGraphIndexBackendConfig,
   JanusGraphStorageConfig
 }
+import com.astrolabsoftware.grafink.models.GrafinkException.ConnectionLimitReachedException
 
 object JanusGraphConnectionManagerSpec extends DefaultRunnableSpec {
 
@@ -54,6 +55,29 @@ object JanusGraphConnectionManagerSpec extends DefaultRunnableSpec {
       val configLayer = ZLayer.succeed(AppConfig(9073, 2))
       val layer       = ((configLayer ++ logger) >>> JanusGraphConnectionManager.live) ++ logger
       assertM(app.provideLayer(layer))(equalTo(List("prop1", "prop2")))
+    },
+    testM("JanusGraphConnectionManager will not cache more than configured connections") {
+      val table1 = "TestJanusGraph1"
+      val table2 = "TestJanusGraph2"
+      val janusConfig =
+        JanusGraphConfig(
+          JanusGraphStorageConfig("127.0.0.1", 8182, tableName = table1, List.empty),
+          JanusGraphIndexBackendConfig("", "", "")
+        )
+      val janusConfig2 = janusConfig.copy(storage = janusConfig.storage.copy(tableName = table2))
+
+      val logger      = Logger.test
+      val configLayer = ZLayer.succeed(AppConfig(9073, 1))
+      val layer       = ((configLayer ++ logger) >>> JanusGraphConnectionManager.live) ++ logger
+      val app =
+        for {
+          g1 <- JanusGraphConnectionManager.getOrCreateGraphInstance(janusConfig)(JanusGraphEnv.inMemoryStorage)
+          g2 <- JanusGraphConnectionManager.getOrCreateGraphInstance(janusConfig2)(JanusGraphEnv.inMemoryStorage)
+        } yield Unit
+
+      assertM(app.provideLayer(layer).run)(
+        dies(equalTo(ConnectionLimitReachedException("API is already caching maximum number of connections")))
+      )
     }
   )
 }

@@ -36,7 +36,7 @@ class SimpleCache(private val capacity: Int, private val mapRef: Ref[ConcurrentH
       cache <- mapRef.get
       _ <- if (cache.size == capacity) {
         // Map is full, lets not create more connections
-        throw new ConnectionLimitReachedException(s"API already is caching maximum number of cached")
+        throw new ConnectionLimitReachedException(s"API is already caching maximum number of connections")
       } else {
         mapRef.update { m =>
           m.put(key, graph)
