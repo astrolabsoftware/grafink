@@ -60,7 +60,7 @@ object ConfigSpec extends DefaultRunnableSpec {
                 )
               ),
               VertexLoaderConfig(10),
-              EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore OR objectId")))
+              EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore OR objectId"), TwoModeSimilarityConfig(List.empty)))
             ),
             JanusGraphConfig(
               JanusGraphStorageConfig(

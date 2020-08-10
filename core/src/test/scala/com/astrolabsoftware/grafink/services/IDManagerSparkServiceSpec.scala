@@ -19,7 +19,7 @@ import com.astrolabsoftware.grafink.utils.{ SparkTestEnv, TempDirService }
 object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
 
   def spec: ZSpec[Environment, Failure] = suite("IDManagerSparkServiceSpec")(
-    testM("IDManagerSparkService will correctly return 0 if no data exists") {
+    testM("IDManagerSparkService will correctly return reservedIdSpace if no data exists") {
       val dateString      = "2019-02-03"
       val date            = LocalDate.parse(dateString, dateFormat)
       val dataPath        = "/iddata"
@@ -27,6 +27,7 @@ object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
       val path            = getClass.getResource(dataPath).getPath
       val logger          = Logger.test
       val jobTime         = JobTime(date, 1)
+      val reservedIdSpace = 7
       val app = for {
         spark <- ZIO.access[SparkEnv](_.get.sparkEnv)
         df    <- ZIO.effect(spark.read.parquet(getClass.getResource(currentDataPath).getPath))
@@ -37,19 +38,24 @@ object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
       } yield lastMax
 
       val idConfigLayer =
-        ZLayer.succeed(IDManagerConfig(IDManagerSparkConfig(path, false), HBaseColumnConfig("", "", "")))
+        ZLayer.succeed(
+          IDManagerConfig(IDManagerSparkConfig(reservedIdSpace, path, false), HBaseColumnConfig("", "", ""))
+        )
 
       val sparkLayer                 = SparkTestEnv.test
       val idManagerSparkServiceLayer = (logger ++ sparkLayer ++ idConfigLayer) >>> IDManagerSparkService.live
 
-      assertM(app.provideLayer(Logger.live ++ sparkLayer ++ idManagerSparkServiceLayer))(equalTo(0L))
+      assertM(app.provideLayer(Logger.live ++ sparkLayer ++ idManagerSparkServiceLayer))(
+        equalTo(reservedIdSpace.toLong)
+      )
     },
     testM("IDManagerSparkService will correctly add ids to input alerts data") {
-      val dateString = "2019-02-01"
-      val date       = LocalDate.parse(dateString, dateFormat)
-      val dataPath   = "/data"
-      val path       = getClass.getResource(dataPath).getPath
-      val logger     = Logger.test
+      val dateString      = "2019-02-01"
+      val date            = LocalDate.parse(dateString, dateFormat)
+      val dataPath        = "/data"
+      val path            = getClass.getResource(dataPath).getPath
+      val logger          = Logger.test
+      val reservedIdSpace = 7
       val readerConfig =
         ZLayer.succeed(ReaderConfig(path, Parquet, keepCols = List("objectId"), keepColsRenamed = List()))
 
@@ -60,7 +66,10 @@ object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
 
       val idManagerConfig =
         ZLayer.succeed(
-          IDManagerConfig(IDManagerSparkConfig(tempDir.getAbsolutePath, false), HBaseColumnConfig("", "", ""))
+          IDManagerConfig(
+            IDManagerSparkConfig(reservedIdSpace, tempDir.getAbsolutePath, false),
+            HBaseColumnConfig("", "", "")
+          )
         )
 
       val app = for {
@@ -78,7 +87,7 @@ object IDManagerSparkServiceSpec extends DefaultRunnableSpec {
       val layer =
         tempDirServiceLayer ++ TestConsole.debug ++ idManagerSparkServiceLayer ++ logger ++ readerLayer ++ sparkLayer
 
-      assertM(app.provideLayer(layer))(hasSameElementsDistinct(Array[Long](1, 2, 3, 4, 5)))
+      assertM(app.provideLayer(layer))(hasSameElementsDistinct(Array[Long](8, 9, 10, 11, 12)))
     }
   )
 }

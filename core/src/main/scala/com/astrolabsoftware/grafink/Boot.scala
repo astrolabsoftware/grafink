@@ -27,7 +27,8 @@ import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models.GrafinkException
 import com.astrolabsoftware.grafink.models.GrafinkException.BadArgumentsException
 import com.astrolabsoftware.grafink.models.config.Config
-import com.astrolabsoftware.grafink.processor.{ EdgeProcessor, VertexProcessor }
+import com.astrolabsoftware.grafink.processor.EdgeProcessor
+import com.astrolabsoftware.grafink.processor.vertex.{ FixedVertexDataReader, VertexProcessor }
 import com.astrolabsoftware.grafink.schema.SchemaLoader
 import com.astrolabsoftware.grafink.services.IDManagerSparkService
 import com.astrolabsoftware.grafink.services.reader.Reader
@@ -60,14 +61,15 @@ object Boot extends App {
 
     val program = parseArgs(args.toArray) match {
       case Some(argsConfig) =>
-        val logger               = Logger.live
-        val configLayer          = logger >>> Config.live(argsConfig.confFile)
-        val sparkLayer           = ZLayer.requires[Blocking] >>> SparkEnv.cluster
-        val schemaLoaderLayer    = logger ++ configLayer >>> SchemaLoader.live
-        val idManagerLayer       = logger ++ sparkLayer ++ configLayer >>> IDManagerSparkService.live
-        val readerLayer          = logger ++ sparkLayer ++ configLayer >>> Reader.live
-        val vertexProcessorLayer = logger ++ configLayer >>> VertexProcessor.live
-        val edgeProcessorLayer   = logger ++ configLayer >>> EdgeProcessor.live
+        val logger                     = Logger.live
+        val configLayer                = logger >>> Config.live(argsConfig.confFile)
+        val sparkLayer                 = ZLayer.requires[Blocking] >>> SparkEnv.cluster
+        val schemaLoaderLayer          = logger ++ configLayer >>> SchemaLoader.live
+        val idManagerLayer             = logger ++ sparkLayer ++ configLayer >>> IDManagerSparkService.live
+        val readerLayer                = logger ++ sparkLayer ++ configLayer >>> Reader.live
+        val fixedVertexDataReaderLayer = logger >>> FixedVertexDataReader.live
+        val vertexProcessorLayer       = logger ++ configLayer >>> VertexProcessor.live
+        val edgeProcessorLayer         = logger ++ configLayer >>> EdgeProcessor.live
 
         val jobTime = JobTime(argsConfig.startDate, argsConfig.duration)
         val job     = if (argsConfig.deleteMode) Job.runGrafinkDeleteJob(jobTime) else Job.runGrafinkJob(jobTime)
@@ -77,6 +79,7 @@ object Boot extends App {
             schemaLoaderLayer ++
             readerLayer ++
             idManagerLayer ++
+            fixedVertexDataReaderLayer ++
             vertexProcessorLayer ++
             edgeProcessorLayer ++
             logger

@@ -26,7 +26,7 @@ object IDManagerSpec extends DefaultRunnableSpec {
       val jobTime             = JobTime(LocalDate.parse(date, dateFormat), 1)
       val app                 = IDManager.fetchID(jobTime)
       val idConfigLayer =
-        ZLayer.succeed(IDManagerConfig(IDManagerSparkConfig("", false), HBaseColumnConfig("", "", "")))
+        ZLayer.succeed(IDManagerConfig(IDManagerSparkConfig(0, "", false), HBaseColumnConfig("", "", "")))
       val janusConfigLayer =
         ZLayer.succeed(
           JanusGraphConfig(

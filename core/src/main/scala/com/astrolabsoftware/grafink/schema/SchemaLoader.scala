@@ -23,7 +23,7 @@ import org.apache.tinkerpop.gremlin.structure.{ Direction, Vertex }
 import org.apache.tinkerpop.gremlin.structure.VertexProperty.Cardinality
 import org.janusgraph.core.{ JanusGraph, PropertyKey }
 import org.janusgraph.core.Multiplicity._
-import org.janusgraph.core.schema.{ Index, JanusGraphIndex, JanusGraphManagement, SchemaAction }
+import org.janusgraph.core.schema.{ Index, JanusGraphManagement, SchemaAction }
 import org.janusgraph.core.schema.JanusGraphManagement.IndexJobFuture
 import zio.{ Has, Task, URLayer, ZIO, ZLayer }
 import zio.logging.{ log, Logging }
@@ -46,9 +46,6 @@ object SchemaLoader {
     def loadSchema(graph: JanusGraph, dataSchema: StructType): ZIO[Logging, Throwable, Unit]
   }
 
-  private def enableIndices[T <: Index](indices: List[T], mgmt: JanusGraphManagement): List[Task[IndexJobFuture]] =
-    indices.map(i => ZIO.effect(mgmt.updateIndex(mgmt.getGraphIndex(i.name()), SchemaAction.ENABLE_INDEX)))
-
   private def addPropertyKeys(
     propertyKeys: List[PropertyKey],
     index: JanusGraphManagement.IndexBuilder
@@ -64,9 +61,10 @@ object SchemaLoader {
       } yield new Service {
 
         def load(graph: JanusGraph, dataSchema: StructType): ZIO[Logging, Throwable, Unit] = {
-          val edgeLabels = jobConfig.schema.edgeLabels
+          val edgeLabels   = jobConfig.schema.edgeLabels
+          val vertexLabels = jobConfig.schema.vertexLabels
 
-          val vertexPropertyCols = schemaConfig.vertexPropertyCols
+          // val vertexPropertyCols = schemaConfig.vertexPropertyCols
           val dataTypeForVertexPropertyCols: Map[String, DataType] =
             dataSchema.fields.map(f => f.name -> f.dataType).toMap
 
@@ -74,41 +72,79 @@ object SchemaLoader {
           val mixedIndices     = schemaConfig.index.mixed
           val indexBackend     = janusGraphConfig.indexBackend
           val edgeIndices      = schemaConfig.index.edge
+          // val fixedVertexLabel = "similarity"
 
           for {
             // Need to rollback any active transaction since we add indices
-            _            <- ZIO.effect(graph.tx.rollback)
-            mgmt         <- ZIO.effect(graph.openManagement())
-            vertextLabel <- ZIO.effect(mgmt.makeVertexLabel(schemaConfig.vertexLabel).make)
-            // TODO: Detect the data type from input data types
-            vertexProperties <- ZIO.effect(
-              vertexPropertyCols.map { m =>
-                val dType = Utils.getClassTag(dataTypeForVertexPropertyCols(m))
-                mgmt.makePropertyKey(m).dataType(dType).make
-              }
+            _    <- ZIO.effect(graph.tx.rollback)
+            mgmt <- ZIO.effect(graph.openManagement())
+
+            // For each configured vertex label, create label and associated properties
+            allVertexLabels <- ZIO.collectAll(
+              vertexLabels.map(vl =>
+                for {
+                  vlLabel <- ZIO.effect(mgmt.makeVertexLabel(vl.name).make)
+                  vlLabelProperties <- ZIO.effect(
+                    vl.properties.map { p =>
+                      val dType = Utils.getClassTagFromString(p.typ)
+                      mgmt.makePropertyKey(p.name).dataType(dType).make
+                    }
+                  )
+                  vlLabelPropertiesFromData <- ZIO.effect(
+                    vl.propertiesFromData.map { m =>
+                      val dType = Utils.getClassTag(dataTypeForVertexPropertyCols(m))
+                      mgmt.makePropertyKey(m).dataType(dType).make
+                    }
+                  )
+                  properties = vlLabelProperties ++ vlLabelPropertiesFromData
+                  vlLabelWithProperties <- ZIO.effect(mgmt.addProperties(vlLabel, properties: _*))
+                } yield vlLabelWithProperties
+              )
             )
-            _ <- ZIO.effect(mgmt.addProperties(vertextLabel, vertexProperties: _*))
+            allVertexProperties = allVertexLabels.flatMap(l => l.mappedProperties.asScala.toList)
+
+//            vertextLabel <- ZIO.effect(mgmt.makeVertexLabel(schemaConfig.vertexLabel).make)
+//
+//            // TODO: Detect the data type from input data types
+//            vertexProperties <- ZIO.effect(
+//              vertexPropertyCols.map { m =>
+//                val dType = Utils.getClassTag(dataTypeForVertexPropertyCols(m))
+//                mgmt.makePropertyKey(m).dataType(dType).make
+//              }
+//            )
+//
+//            _ <- ZIO.effect(mgmt.addProperties(vertextLabel, vertexProperties: _*))
+
+//            // TODO: Make this configurable
+//            fixedVertexLabel <- ZIO.effect(mgmt.makeVertexLabel(fixedVertexLabel).make)
+//            fixedVertexProperties <- ZIO.effect(
+//              List("recipe", "value").map { m =>
+//                mgmt.makePropertyKey(m).dataType(classOf[String]).make
+//              }
+//            )
+//            _ <- ZIO.effect(mgmt.addProperties(fixedVertexLabel, fixedVertexProperties: _*))
+
             // TODO make this better
             _ <- ZIO.collectAll_(
               edgeLabels.map(l =>
                 for {
                   label <- ZIO.effect(mgmt.makeEdgeLabel(l.name).multiplicity(MULTI).make)
-                  labelWithProperty <- if (!l.properties.isEmpty) {
+                  labelWithProperty <- if (l.properties.nonEmpty) {
                     // An edgelabel cardinality can only be SINGLE
-                    val k = l.properties("key")
-                    val v = l.properties("typ")
                     for {
                       // scalastyle:off
                       // https://github.com/JanusGraph/janusgraph/blob/master/janusgraph-core/src/main/java/org/janusgraph/graphdb/transaction/StandardJanusGraphTx.java#L924
                       // scalastyle:on
-                      property <- ZIO.effect(
-                        mgmt
-                          .makePropertyKey(k)
-                          .dataType(Utils.getClassTagFromString(v))
-                          .cardinality(Cardinality.single)
-                          .make
+                      properties <- ZIO.effect(
+                        l.properties.map(p =>
+                          mgmt
+                            .makePropertyKey(p.name)
+                            .dataType(Utils.getClassTagFromString(p.typ))
+                            .cardinality(Cardinality.single)
+                            .make
+                        )
                       )
-                      editedLabel <- ZIO.effect(mgmt.addProperties(label, property))
+                      editedLabel <- ZIO.effect(mgmt.addProperties(label, properties: _*))
                     } yield editedLabel
                   } else ZIO.succeed(label)
                 } yield labelWithProperty
@@ -117,7 +153,7 @@ object SchemaLoader {
             // Add composite indices
             compositeIndicesBuilt <- ZIO.collectAll(
               compositeIndices.map { i =>
-                val keysToAdd = vertexProperties.filter(x => i.properties.contains(x.name()))
+                val keysToAdd = allVertexProperties.filter(x => i.properties.contains(x.name()))
                 for {
                   index          <- ZIO.effect(mgmt.buildIndex(i.name, classOf[Vertex]))
                   indexToBuild   <- ZIO.effect(addPropertyKeys(keysToAdd, index))
@@ -129,7 +165,7 @@ object SchemaLoader {
             // Add mixed indices
             mixedIndicesBuilt <- ZIO.collectAll(
               mixedIndices.map { i =>
-                val keysToAdd = vertexProperties.filter(x => i.properties.contains(x.name()))
+                val keysToAdd = allVertexProperties.filter(x => i.properties.contains(x.name()))
                 for {
                   index          <- ZIO.effect(mgmt.buildIndex(i.name, classOf[Vertex]))
                   indexToBuild   <- ZIO.effect(addPropertyKeys(keysToAdd, index))

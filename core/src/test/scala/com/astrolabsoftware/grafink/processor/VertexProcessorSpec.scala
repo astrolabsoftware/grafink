@@ -18,6 +18,7 @@ import com.astrolabsoftware.grafink.common.{ PaddedPartitionManager, Utils }
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models._
+import com.astrolabsoftware.grafink.processor.vertex.{ VertexProcessor, VertexProcessorLive }
 import com.astrolabsoftware.grafink.services.IDManagerSparkService
 import com.astrolabsoftware.grafink.services.IDManagerSparkService.IDManagerSparkService
 import com.astrolabsoftware.grafink.services.reader.Reader
@@ -46,8 +47,7 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
         )
       val jobConfig = GrafinkJobConfig(
         SchemaConfig(
-          vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
-          vertexLabel = "type",
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snnscore", "objectId"))),
           edgeLabels = List(),
           IndexConfig(
             composite = List(CompositeIndex(name = objectIdIndex, properties = List("objectId"))),
@@ -55,8 +55,14 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
             edge = List.empty
           )
         ),
-        VertexLoaderConfig(10),
-        EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig("")))
+        VertexLoaderConfig(10, "alert", ""),
+        EdgeLoaderConfig(
+          10,
+          1,
+          25000,
+          List.empty,
+          EdgeRulesConfig(SimilarityConfig(""), TwoModeSimilarityConfig(List.empty))
+        )
       )
       val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
       val tempDirServiceLayer     = ((zio.console.Console.live) >>> TempDirService.test)
@@ -66,7 +72,7 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
 
       val idManagerConfig =
         ZLayer.succeed(
-          IDManagerConfig(IDManagerSparkConfig(tempDir.getAbsolutePath, false), HBaseColumnConfig("", "", ""))
+          IDManagerConfig(IDManagerSparkConfig(0, tempDir.getAbsolutePath, false), HBaseColumnConfig("", "", ""))
         )
 
       val app = for {
@@ -79,7 +85,7 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
               vertexData <- idManager.process(df, "")
               vertexProcessorLive = VertexProcessorLive(grafinkJanusGraphConfig)
               dataTypeForVertexPropertyCols = vertexProcessorLive
-                .getDataTypeForVertexProperties(jobConfig.schema.vertexPropertyCols, df)
+                .getDataTypeForVertexProperties(jobConfig.schema.vertexLabels.head.propertiesFromData, df)
               _ <- vertexProcessorLive
                 .job(jobConfig, graph, dataTypeForVertexPropertyCols, vertexData.current.collect.toIterator)
               g = graph.traversal()
@@ -115,13 +121,18 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
 
       val jobConfig = GrafinkJobConfig(
         SchemaConfig(
-          vertexPropertyCols = List("rfscore", "objectId"),
-          vertexLabel = "type",
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snnscore"))),
           edgeLabels = List(),
           index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
         ),
-        VertexLoaderConfig(1),
-        EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig("")))
+        VertexLoaderConfig(1, "alert", ""),
+        EdgeLoaderConfig(
+          10,
+          1,
+          25000,
+          List.empty,
+          EdgeRulesConfig(SimilarityConfig(""), TwoModeSimilarityConfig(List.empty))
+        )
       )
       val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
       val vertexSchema = StructType(

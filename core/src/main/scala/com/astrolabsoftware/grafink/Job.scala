@@ -25,10 +25,12 @@ import zio.logging.{ log, Logging }
 import com.astrolabsoftware.grafink.common.{ PaddedPartitionManager, PartitionManagerImpl, Utils }
 import com.astrolabsoftware.grafink.models.GrafinkJanusGraphConfig
 import com.astrolabsoftware.grafink.models.config._
-import com.astrolabsoftware.grafink.processor.{ EdgeProcessor, VertexProcessor }
+import com.astrolabsoftware.grafink.processor.EdgeProcessor
 import com.astrolabsoftware.grafink.processor.EdgeProcessor.EdgeProcessorService
-import com.astrolabsoftware.grafink.processor.VertexProcessor.VertexProcessorService
-import com.astrolabsoftware.grafink.processor.edgerules.SimilarityClassifer
+import com.astrolabsoftware.grafink.processor.edgerules.{ SimilarityClassifer, TwoModeClassifier, VertexClassifierRule }
+import com.astrolabsoftware.grafink.processor.vertex.{ FixedVertexDataReader, VertexProcessor }
+import com.astrolabsoftware.grafink.processor.vertex.FixedVertexDataReader.FixedVertexDataReader
+import com.astrolabsoftware.grafink.processor.vertex.VertexProcessor.VertexProcessorService
 import com.astrolabsoftware.grafink.schema.SchemaLoader
 import com.astrolabsoftware.grafink.schema.SchemaLoader.SchemaLoaderService
 import com.astrolabsoftware.grafink.services.IDManagerSparkService.IDManagerSparkService
@@ -55,6 +57,7 @@ object Job {
       with SchemaLoaderService
       with ReaderService
       with IDManagerSparkService
+      with FixedVertexDataReader
       with VertexProcessorService
       with EdgeProcessorService
       with Logging
@@ -79,12 +82,29 @@ object Job {
         // Generate Ids for the data
         idManager  <- ZIO.access[IDManagerSparkService](_.get)
         vertexData <- idManager.process(df, janusGraphConfig.storage.tableName)
+        // Load Fixed vertices if twomode rule is configured
+        fixedVertices <- if (jobConfig.edgeLoader.rulesToApply.contains("twoModeClassifier")) {
+          JanusGraphEnv
+            .hbaseBasic(GrafinkJanusGraphConfig(jobConfig, janusGraphConfig))
+            .use(graph =>
+              for {
+                // load fixed vertices
+                fixedVertices <- FixedVertexDataReader.readFixedVertexData(jobConfig.vertexLoader)
+                _             <- VertexProcessor.loadFixedVertices(graph, fixedVertices)
+              } yield (fixedVertices)
+            )
+        } else ZIO.succeed(List.empty)
+
         // Process vertices
         _ <- VertexProcessor.process(vertexData.current)
         // Process Edges
+        rulesMap = Map(
+          "similarityClassifier" -> new SimilarityClassifer(jobConfig.edgeLoader.rules.similarityClassifer),
+          "twoModeClassifier"    -> new TwoModeClassifier(jobConfig.edgeLoader.rules.twoModeClassifier, fixedVertices)
+        )
         _ <- EdgeProcessor.process(
           vertexData,
-          List(new SimilarityClassifer(jobConfig.edgeLoader.rules.similarityClassifer))
+          jobConfig.edgeLoader.rulesToApply.map(rulesMap)
         )
       } yield ()
 
