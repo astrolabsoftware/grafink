@@ -50,17 +50,16 @@ object ConfigSpec extends DefaultRunnableSpec {
           GrafinkJanusGraphConfig(
             GrafinkJobConfig(
               SchemaConfig(
-                vertexPropertyCols = List("rfscore", "snnscore"),
-                vertexLabel = "type",
-                edgeLabels = List(EdgeLabelConfig("similarity", Map("key" -> "value", "typ" -> "int"))),
+                vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snnscore"))),
+                edgeLabels = List(EdgeLabelConfig("similarity", List(PropertySchema(name = "value", typ = "int")))),
                 index = IndexConfig(
                   composite = List(CompositeIndex(name = "objectIdIndex", properties = List("objectId"))),
                   mixed = List.empty,
                   edge = List(EdgeIndex(name = "similarityIndex", properties = List("value"), label = "similarity"))
                 )
               ),
-              VertexLoaderConfig(10),
-              EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore OR objectId"), TwoModeSimilarityConfig(List.empty)))
+              VertexLoaderConfig(10, "alert", "/fixedvertices.csv"),
+              EdgeLoaderConfig(100, 10, 25000, List.empty, EdgeRulesConfig(SimilarityConfig("rfscore OR objectId"), TwoModeSimilarityConfig(List.empty)))
             ),
             JanusGraphConfig(
               JanusGraphStorageConfig(

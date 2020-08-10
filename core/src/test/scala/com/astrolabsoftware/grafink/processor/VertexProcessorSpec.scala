@@ -18,7 +18,7 @@ import com.astrolabsoftware.grafink.common.{ PaddedPartitionManager, Utils }
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models._
-import com.astrolabsoftware.grafink.processor.vertex.{ VertexProcessor, VertexProcessorLive }
+import com.astrolabsoftware.grafink.processor.vertex.{ FixedVertexDataReader, VertexProcessor, VertexProcessorLive }
 import com.astrolabsoftware.grafink.services.IDManagerSparkService
 import com.astrolabsoftware.grafink.services.IDManagerSparkService.IDManagerSparkService
 import com.astrolabsoftware.grafink.services.reader.Reader
@@ -104,6 +104,63 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
 
       assertM(app.provideLayer(layer))(
         hasSameElementsDistinct(List("ZTF19acmcetc", "ZTF17aaanypg", "ZTF19acmbxka", "ZTF19acmbxfe", "ZTF19acmbtac"))
+      )
+    },
+    testM("VertexProcessor will correctly add fixedvertices into janusgraph") {
+      val dateString    = "2019-02-01"
+      val date          = LocalDate.parse(dateString, dateFormat)
+      val dataPath      = "/data"
+      val path          = getClass.getResource(dataPath).getPath
+      val logger        = Logger.test
+      val objectIdIndex = "objectIdIndex"
+
+      val janusConfig =
+        JanusGraphConfig(
+          JanusGraphStorageConfig("", 0, tableName = "test", List.empty),
+          JanusGraphIndexBackendConfig("", "", "")
+        )
+      val jobConfig = GrafinkJobConfig(
+        SchemaConfig(
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snnscore", "objectId"))),
+          edgeLabels = List(),
+          IndexConfig(
+            composite = List(CompositeIndex(name = objectIdIndex, properties = List("objectId"))),
+            mixed = List.empty,
+            edge = List.empty
+          )
+        ),
+        VertexLoaderConfig(10, "alert", "/fixedvertices.csv"),
+        EdgeLoaderConfig(
+          10,
+          1,
+          25000,
+          List.empty,
+          EdgeRulesConfig(SimilarityConfig(""), TwoModeSimilarityConfig(List.empty))
+        )
+      )
+      val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
+
+      val vertexProcessorLive = VertexProcessorLive(grafinkJanusGraphConfig)
+
+      val app = for {
+        output <- JanusGraphTestEnv
+          .test(janusConfig)
+          .use(graph =>
+            for {
+              fixedVertices <- FixedVertexDataReader.readFixedVertexData(jobConfig.vertexLoader)
+              _             <- vertexProcessorLive.loadFixedVertices(graph, fixedVertices)
+              g = graph.traversal()
+            } yield g.V().toList.asScala.map(_.property("recipe").value().toString).toList
+          )
+      } yield output
+
+      val fixedVertexDataReaderLayer = logger >>> FixedVertexDataReader.live
+      val vertexProcessorLayer =
+        (sparkLayer ++ ZLayer.succeed(jobConfig) ++ ZLayer.succeed(janusConfig) ++ logger) >>> VertexProcessor.live
+      val layer = TestConsole.debug ++ vertexProcessorLayer ++ logger ++ sparkLayer ++ fixedVertexDataReaderLayer
+
+      assertM(app.provideLayer(layer))(
+        hasSameElementsDistinct(List("supernova", "microlensing", "asteroids", "catalog"))
       )
     },
     testM("VertexProcessor will correctly delete already added input alerts into janusgraph") {

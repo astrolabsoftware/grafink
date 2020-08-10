@@ -102,7 +102,7 @@ final case class VertexProcessorLive(config: GrafinkJanusGraphConfig) extends Ve
 
     @inline
     def getVertexParams(r: Row, id: java.lang.Long): Seq[AnyRef] =
-      Seq(T.id, id) ++ Seq(T.label, label.name) ++ getVertexProperties(r)
+      Seq(T.id, id, T.label, label.name) ++ getVertexProperties(r)
 
     val idManager = graph.asInstanceOf[StandardJanusGraph].getIDManager
     val kgroup    = partition.grouped(batchSize)
