@@ -48,11 +48,18 @@ class TwoModeClassifier(config: TwoModeSimilarityConfig, similarityRecipes: List
         "asteroids"    -> roidCond
       )
 
-    val directRules = rules.filter(ruleToCondition.contains)
+    val ruleToColumnName =
+      Map("catalog" -> "cdsxmatch")
+
+    val directRules     = rules.filter(ruleToCondition.contains)
+    val exactMatchRules = rules.filterNot(ruleToCondition.contains)
+
+    val getRecipesForRule: String => List[FixedVertex] = rule =>
+      similarityRecipes.filter(k => k.properties.exists(p => p.value.toString == rule))
 
     // Map from Rule to id of the similarity vertex
     val ruleToId = directRules.map { rule =>
-      val recipe = similarityRecipes.filter(k => k.properties.exists(p => p.value.toString == rule))
+      val recipe = getRecipesForRule(rule)
       if (recipe.isEmpty) {
         throw MissingFixedVertex(s"No fixed vertex found in csv for configured rule $rule")
       }
@@ -69,6 +76,35 @@ class TwoModeClassifier(config: TwoModeSimilarityConfig, similarityRecipes: List
         }
       }
 
-    edges.toDF()
+    // Handles catalog
+    val exactMatchRuleToId: Map[String, Map[String, Long]] = exactMatchRules.map { rule =>
+      val recipe = getRecipesForRule(rule)
+      if (recipe.isEmpty) {
+        throw MissingFixedVertex(s"No fixed vertex found in csv for configured rule $rule")
+      }
+      rule -> recipe.map { r =>
+        val vProp = r.properties.find(p => p.name == "equals")
+        if (vProp.isEmpty) {
+          throw new IllegalArgumentException(
+            s"entry $r must have property equals since it is exact match recipe (rule $rule)"
+          )
+        }
+        vProp.get.value.toString -> r.id
+      }.toMap
+    }.toMap
+
+    val exactMatchEdges =
+      df.flatMap { row =>
+        exactMatchRules.flatMap { rule =>
+          val colName = ruleToColumnName(rule)
+          val v       = row.getAs[String](colName)
+          if (exactMatchRuleToId(rule).contains(v)) {
+            val targetId = exactMatchRuleToId(rule)(v)
+            Some(Edge(row.getAs[Long]("id"), targetId, 0.0))
+          } else None
+        }
+      }
+
+    edges.union(exactMatchEdges).toDF()
   }
 }

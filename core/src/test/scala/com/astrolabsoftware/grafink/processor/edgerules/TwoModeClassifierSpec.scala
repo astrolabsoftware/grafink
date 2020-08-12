@@ -75,6 +75,76 @@ object TwoModeClassifierSpec extends DefaultRunnableSpec {
           hasSameElementsDistinct(List(Row(10L, 1L, 0.0), Row(12L, 2L, 0.0), Row(13L, 2L, 0.0), Row(13L, 3L, 0.0)))
         )
       },
+      testM("TwoMode Classifier will correctly make an edge between fixed and new vertices for catalog") {
+        val twoModeSimilarityConfig = TwoModeSimilarityConfig(recipes = List("catalog"))
+
+        val similarityRecipes = List(
+          FixedVertex(
+            1,
+            "similarity",
+            List(
+              FixedVertexProperty("recipe", "string", "catalog"),
+              FixedVertexProperty("equals", "string", WDStar.name)
+            )
+          ),
+          FixedVertex(
+            4,
+            "similarity",
+            List(FixedVertexProperty("recipe", "string", "catalog"), FixedVertexProperty("equals", "string", AGN.name))
+          )
+        )
+
+        val classifer = new TwoModeClassifier(twoModeSimilarityConfig, similarityRecipes)
+        val currentData =
+          List(
+            genAlert(
+              _id = 10L,
+              _objectId = "ZTF19acmbyav",
+              _rfscore = 0.92,
+              _snnscore = 0.95,
+              _classtar = 0.0,
+              _roid = 1,
+              _cdsxmatch = WDStar,
+              _mulens_class_1 = MULENS_NULL,
+              _mulens_class_2 = MULENS_NULL
+            ),
+            genAlert(
+              _id = 12L,
+              _objectId = "ZTF19acmbyav",
+              _rfscore = 0.92,
+              _snnscore = 0.95,
+              _classtar = 0.0,
+              _roid = 1,
+              _cdsxmatch = CStar,
+              _mulens_class_1 = MULENS_NULL,
+              _mulens_class_2 = MULENS_NULL
+            ),
+            genAlert(
+              _id = 13L,
+              _objectId = "ZTF19acmbyav",
+              _rfscore = 0.92,
+              _snnscore = 0.95,
+              _classtar = 0.0,
+              _roid = 1,
+              _cdsxmatch = AGN,
+              _mulens_class_1 = MULENS_NULL,
+              _mulens_class_2 = MULENS_NULL
+            )
+          )
+
+        val app = for {
+          spark <- SparkTestEnv.sparkEnv
+        } yield {
+          import spark.implicits._
+          val loadedDf  = spark.emptyDataFrame
+          val currentDf = currentData.toDF
+          classifer.classify(loadedDf, currentDf).collect.toList
+        }
+
+        assertM(app.provideLayer(sparkLayer))(
+          hasSameElementsDistinct(List(Row(10L, 1L, 0.0), Row(13L, 4L, 0.0)))
+        )
+      },
       testM("TwoMode Classifier will throw if a rule is configured but fixed vertex does not exist for it") {
         val twoModeSimilarityConfig = TwoModeSimilarityConfig(recipes = List("supernova", "microlensing"))
 
