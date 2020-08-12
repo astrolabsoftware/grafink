@@ -4,22 +4,9 @@ import org.apache.spark.sql.Row
 import zio.test._
 import zio.test.Assertion._
 
-import com.astrolabsoftware.grafink.models.{
-  FixedVertex,
-  FixedVertexProperty,
-  ML,
-  MULENS_NULL,
-  PropertySchema,
-  TwoModeSimilarityConfig,
-  WDStar
-}
+import com.astrolabsoftware.grafink.models._
 import com.astrolabsoftware.grafink.models.GrafinkException.MissingFixedVertex
-import com.astrolabsoftware.grafink.processor.edgerules.SimilarityClassifierSpec.{
-  genAlert,
-  sparkLayer,
-  Environment,
-  Failure
-}
+import com.astrolabsoftware.grafink.processor.edgerules.SimilarityClassifierSpec._
 import com.astrolabsoftware.grafink.utils.SparkTestEnv
 
 object TwoModeClassifierSpec extends DefaultRunnableSpec {
