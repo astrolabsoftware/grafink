@@ -48,10 +48,10 @@ object FixedVertexDataReader {
           } yield {
             it.map { r =>
               val colNum        = r.size
-              val numProperties = (colNum - 2) % 3
+              val numProperties = (colNum - 2) / 3
               val id            = r(0).toLong
               val label         = r(1)
-              val properties = (0 to numProperties).map { i =>
+              val properties = (0 until numProperties).map { i =>
                 val propIndex   = 2 + (i * 3)
                 val propertyVal = Utils.stringToValueType(r(propIndex + 2), r(propIndex + 1))
                 FixedVertexProperty(r(propIndex), r(propIndex + 1), propertyVal)
