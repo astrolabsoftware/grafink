@@ -16,7 +16,7 @@
  */
 package com.astrolabsoftware.grafink.processor.vertex
 
-import java.io.File
+import java.io.{ File, InputStreamReader }
 
 import scala.io.Source
 
@@ -40,9 +40,10 @@ object FixedVertexDataReader {
       new Service {
         override def readFixedVertexData(config: VertexLoaderConfig): ZIO[Logging, Throwable, List[FixedVertex]] =
           for {
-            path   <- ZIO.effect((new File(getClass().getResource(config.fixedVertices).getPath)).getAbsolutePath)
-            _      <- log.info(s"Reading fixed vertices data from $path")
-            reader <- ZIO.effect(CSVReader.open(path))
+            path   <- ZIO.effect(getClass().getResourceAsStream(config.fixedVertices))
+            file   <- ZIO.effect((new InputStreamReader(path))) // .getAbsolutePath)
+            _      <- log.info(s"Reading fixed vertices data from ${path}")
+            reader <- ZIO.effect(CSVReader.open(file))
             it = reader.iterator.toList
           } yield {
             it.map { r =>

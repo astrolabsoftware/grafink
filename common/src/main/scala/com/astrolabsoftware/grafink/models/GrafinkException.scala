@@ -27,6 +27,8 @@ object GrafinkException {
 
   final case class BadSimilarityExpression(override val error: String) extends GrafinkException(error)
 
+  final case class MissingFixedVertex(override val error: String) extends GrafinkException(error)
+
   // API specific
   final case class ConnectionLimitReachedException(override val error: String) extends GrafinkException(error)
 

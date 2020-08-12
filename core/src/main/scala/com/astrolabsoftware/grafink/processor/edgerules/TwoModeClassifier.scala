@@ -19,6 +19,7 @@ package com.astrolabsoftware.grafink.processor.edgerules
 import org.apache.spark.sql.{ DataFrame, Encoder, Encoders, Row }
 
 import com.astrolabsoftware.grafink.models.{ FixedVertex, TwoModeSimilarityConfig }
+import com.astrolabsoftware.grafink.models.GrafinkException.MissingFixedVertex
 
 case class Edge(src: Long, dst: Long, propVal: Double)
 
@@ -28,20 +29,7 @@ class TwoModeClassifier(config: TwoModeSimilarityConfig, similarityRecipes: List
   val scoreCond: Row => Boolean = r => (r.getAs[Double]("rfscore") > 0.9) && (r.getAs[Double]("snnscore") > 0.9)
   val roidCond: Row => Boolean  = r => r.getAs[Int]("roid") > 1
   val mulensmlCond: Row => Boolean = r =>
-    (r.getAs[String]("mulens1_class_1") == "ML") && (r.getAs[String]("mulens1_class_2") == "ML")
-
-//  val scoreCond: (Column, Column) => Column = (score1, score2) => (score1 > 0.9) && (score2 > 0.9)
-//  val roidCond: Column => Column = roid => roid > 1
-//  val mulensmlCond: (Column, Column) => Column =
-//    (mulens1_class_1, mulens1_class_2) =>
-//      (mulens1_class_1 === "ML" && mulens1_class_2 === "ML")
-
-  val ruleToCondition =
-    Map(
-      "supernova"    -> scoreCond,
-      "microlensing" -> mulensmlCond,
-      "asteroids"    -> roidCond
-    )
+    (r.getAs[String]("mulens_class_1") == "ML") && (r.getAs[String]("mulens_class_2") == "ML")
 
   override def name: String = "similarityClassifier"
 
@@ -53,19 +41,29 @@ class TwoModeClassifier(config: TwoModeSimilarityConfig, similarityRecipes: List
 
     val rules = config.recipes
 
+    val ruleToCondition =
+      Map(
+        "supernova"    -> scoreCond,
+        "microlensing" -> mulensmlCond,
+        "asteroids"    -> roidCond
+      )
+
     val directRules = rules.filter(ruleToCondition.contains)
 
     // Map from Rule to id of the similarity vertex
     val ruleToId = directRules.map { rule =>
-      val recipe = similarityRecipes.filter(k => k.properties.exists(p => p.name == rule)).head
-      rule -> recipe.id
+      val recipe = similarityRecipes.filter(k => k.properties.exists(p => p.value.toString == rule))
+      if (recipe.isEmpty) {
+        throw MissingFixedVertex(s"No fixed vertex found in csv for configured rule $rule")
+      }
+      rule -> recipe.head.id
     }.toMap
 
     implicit val ec: Encoder[Edge] = Encoders.product[Edge]
 
     val edges =
       df.flatMap { row =>
-        rules.flatMap { rule =>
+        directRules.flatMap { rule =>
           // Normal rule based connections
           if (ruleToCondition(rule)(row)) Some(Edge(row.getAs[Long]("id"), ruleToId(rule), 0.0)) else None
         }

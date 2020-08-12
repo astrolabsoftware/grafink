@@ -16,9 +16,7 @@
  */
 package com.astrolabsoftware.grafink.processor.vertex
 
-import java.io.File
-
-import scala.io.Source
+import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.{ DataFrame, Row }
 import org.apache.spark.sql.types.DataType
@@ -174,22 +172,37 @@ final case class VertexProcessorLive(config: GrafinkJanusGraphConfig) extends Ve
   ): ZIO[FixedVertexDataReader with Logging, Throwable, Unit] = {
 
     val idManager = graph.asInstanceOf[StandardJanusGraph].getIDManager
+    val firstId   = java.lang.Long.valueOf(idManager.toVertexId(fixedVertices.head.id))
     for {
-      _ <- ZIO.collectAll_(
-        fixedVertices.map(v =>
-          ZIO.effect(
-            graph.addVertex(
-              (Seq(
-                T.id,
-                java.lang.Long.valueOf(idManager.toVertexId(v.id)),
-                T.label,
-                v.label
-              ) ++ v.properties.flatMap(p => List(p.name, p.value)): Seq[AnyRef]): _*
-            )
-          )
+      // First check if any of these vertices already exists, if yes, skip loading
+      _ <- ZIO
+        .effect(graph.traversal())
+        .bracket(
+          g => ZIO.effect(g.close()).fold(_ => ZIO.unit, _ => ZIO.unit),
+          g =>
+            for {
+              existV <- ZIO.effect(g.V(firstId).toList.asScala)
+              _ <- if (existV.size > 0) {
+                log.warn(s"Skipping adding fixed vertices as vertex ${existV.head.id} already exists")
+              } else {
+                ZIO.collectAll_(
+                  fixedVertices.map(v =>
+                    ZIO.effect(
+                      graph.addVertex(
+                        (Seq(
+                          T.id,
+                          java.lang.Long.valueOf(idManager.toVertexId(v.id)),
+                          T.label,
+                          v.label
+                        ) ++ v.properties.flatMap(p => List(p.name, p.value)): Seq[AnyRef]): _*
+                      )
+                    )
+                  )
+                )
+              }
+              _ <- ZIO.effect(graph.tx.commit)
+            } yield ()
         )
-      )
-      _ <- ZIO.effect(graph.tx.commit)
     } yield ()
   }
 

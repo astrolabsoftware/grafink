@@ -1,4 +1,4 @@
-package com.astrolabsoftware.grafink.processor
+package com.astrolabsoftware.grafink.processor.vertex
 
 import java.time.LocalDate
 
@@ -6,19 +6,18 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
-import org.apache.spark.sql.types.{ DoubleType, LongType, StringType, StructField, StructType }
+import org.apache.spark.sql.types._
 import org.apache.tinkerpop.gremlin.structure.T
 import org.janusgraph.graphdb.database.StandardJanusGraph
 import zio.{ ZIO, ZLayer }
-import zio.test.{ DefaultRunnableSpec, _ }
-import zio.test.Assertion._
+import zio.test._
+import zio.test.Assertion.{ equalTo, hasSameElementsDistinct }
 import zio.test.environment.TestConsole
 
 import com.astrolabsoftware.grafink.common.{ PaddedPartitionManager, Utils }
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models._
-import com.astrolabsoftware.grafink.processor.vertex.{ FixedVertexDataReader, VertexProcessor, VertexProcessorLive }
 import com.astrolabsoftware.grafink.services.IDManagerSparkService
 import com.astrolabsoftware.grafink.services.IDManagerSparkService.IDManagerSparkService
 import com.astrolabsoftware.grafink.services.reader.Reader

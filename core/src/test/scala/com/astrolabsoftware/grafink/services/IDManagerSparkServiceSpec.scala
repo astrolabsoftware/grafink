@@ -12,7 +12,7 @@ import com.astrolabsoftware.grafink.common.PaddedPartitionManager
 import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models._
-import com.astrolabsoftware.grafink.processor.VertexProcessorSpec.{ getClass, sparkLayer }
+import com.astrolabsoftware.grafink.processor.vertex.VertexProcessorSpec.{ getClass, sparkLayer }
 import com.astrolabsoftware.grafink.services.reader.Reader
 import com.astrolabsoftware.grafink.utils.{ SparkTestEnv, TempDirService }
 
