@@ -106,7 +106,7 @@ object Job {
         rulesMap = Map(
           "similarityClassifier" -> new SimilarityClassifer(jobConfig.edgeLoader.rules.similarityClassifer),
           "twoModeClassifier"    -> new TwoModeClassifier(jobConfig.edgeLoader.rules.twoModeClassifier, fixedVertices),
-          "sameValueClassifier"  -> new SameValueClassifier(jobConfig.edgeLoader.rules.sameValueConfig)
+          "sameValueClassifier"  -> new SameValueClassifier(jobConfig.edgeLoader.rules.sameValueClassifier)
         )
         _ <- EdgeProcessor.process(
           vertexData,
