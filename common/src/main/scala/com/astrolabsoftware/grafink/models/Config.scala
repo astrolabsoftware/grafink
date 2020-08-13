@@ -65,7 +65,9 @@ case class SimilarityConfig(similarityExp: String)
 
 case class TwoModeSimilarityConfig(recipes: List[String])
 
-case class EdgeRulesConfig(similarityClassifer: SimilarityConfig, twoModeClassifier: TwoModeSimilarityConfig)
+case class SameValueSimilarityConfig(colsToConnect: List[String])
+
+case class EdgeRulesConfig(similarityClassifer: SimilarityConfig, twoModeClassifier: TwoModeSimilarityConfig, sameValueConfig: SameValueSimilarityConfig)
 
 case class EdgeLoaderConfig(batchSize: Int, parallelism: Int, taskSize: Int, rulesToApply: List[String], rules: EdgeRulesConfig)
 

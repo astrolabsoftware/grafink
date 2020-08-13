@@ -50,7 +50,7 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
           parallelismConfig,
           taskSize,
           List.empty,
-          EdgeRulesConfig(similarityConfig, TwoModeSimilarityConfig(List.empty))
+          EdgeRulesConfig(similarityConfig, TwoModeSimilarityConfig(List.empty), SameValueSimilarityConfig(List.empty))
         )
       )
       val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
@@ -93,7 +93,7 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
           1,
           25000,
           List.empty,
-          EdgeRulesConfig(similarityConfig, TwoModeSimilarityConfig(List.empty))
+          EdgeRulesConfig(similarityConfig, TwoModeSimilarityConfig(List.empty), SameValueSimilarityConfig(List.empty))
         )
       )
       val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)

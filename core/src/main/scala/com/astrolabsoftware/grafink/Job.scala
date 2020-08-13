@@ -27,7 +27,12 @@ import com.astrolabsoftware.grafink.models.GrafinkJanusGraphConfig
 import com.astrolabsoftware.grafink.models.config._
 import com.astrolabsoftware.grafink.processor.EdgeProcessor
 import com.astrolabsoftware.grafink.processor.EdgeProcessor.EdgeProcessorService
-import com.astrolabsoftware.grafink.processor.edgerules.{ SimilarityClassifer, TwoModeClassifier, VertexClassifierRule }
+import com.astrolabsoftware.grafink.processor.edgerules.{
+  SameValueClassifier,
+  SimilarityClassifer,
+  TwoModeClassifier,
+  VertexClassifierRule
+}
 import com.astrolabsoftware.grafink.processor.vertex.{ FixedVertexDataReader, VertexProcessor }
 import com.astrolabsoftware.grafink.processor.vertex.FixedVertexDataReader.FixedVertexDataReader
 import com.astrolabsoftware.grafink.processor.vertex.VertexProcessor.VertexProcessorService
@@ -100,7 +105,8 @@ object Job {
         // Process Edges
         rulesMap = Map(
           "similarityClassifier" -> new SimilarityClassifer(jobConfig.edgeLoader.rules.similarityClassifer),
-          "twoModeClassifier"    -> new TwoModeClassifier(jobConfig.edgeLoader.rules.twoModeClassifier, fixedVertices)
+          "twoModeClassifier"    -> new TwoModeClassifier(jobConfig.edgeLoader.rules.twoModeClassifier, fixedVertices),
+          "sameValueClassifier"  -> new SameValueClassifier(jobConfig.edgeLoader.rules.sameValueConfig)
         )
         _ <- EdgeProcessor.process(
           vertexData,

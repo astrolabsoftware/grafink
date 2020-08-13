@@ -59,7 +59,12 @@ object ConfigSpec extends DefaultRunnableSpec {
                 )
               ),
               VertexLoaderConfig(10, "alert", "/fixedvertices.csv"),
-              EdgeLoaderConfig(100, 10, 25000, List.empty, EdgeRulesConfig(SimilarityConfig("rfscore OR objectId"), TwoModeSimilarityConfig(List.empty)))
+              EdgeLoaderConfig(100, 10, 25000, List.empty,
+                EdgeRulesConfig(
+                  SimilarityConfig("rfscore OR objectId"),
+                  TwoModeSimilarityConfig(List.empty),
+                  SameValueSimilarityConfig(List.empty))
+              )
             ),
             JanusGraphConfig(
               JanusGraphStorageConfig(

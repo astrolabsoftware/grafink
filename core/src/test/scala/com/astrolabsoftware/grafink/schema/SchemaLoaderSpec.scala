@@ -44,7 +44,11 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
           10,
           25000,
           List.empty,
-          EdgeRulesConfig(SimilarityConfig("rfscore"), TwoModeSimilarityConfig(List.empty))
+          EdgeRulesConfig(
+            SimilarityConfig("rfscore"),
+            TwoModeSimilarityConfig(List.empty),
+            SameValueSimilarityConfig(List.empty)
+          )
         )
       )
       val app =
@@ -98,7 +102,11 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
           10,
           25000,
           List.empty,
-          EdgeRulesConfig(SimilarityConfig("rfscore"), TwoModeSimilarityConfig(List.empty))
+          EdgeRulesConfig(
+            SimilarityConfig("rfscore"),
+            TwoModeSimilarityConfig(List.empty),
+            SameValueSimilarityConfig(List.empty)
+          )
         )
       )
       case class IndexResult(name: String, status: SchemaStatus)

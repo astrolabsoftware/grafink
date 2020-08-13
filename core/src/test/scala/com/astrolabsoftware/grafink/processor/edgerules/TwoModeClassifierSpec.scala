@@ -24,7 +24,7 @@ object TwoModeClassifierSpec extends DefaultRunnableSpec {
           FixedVertex(3, "similarity", List(FixedVertexProperty("recipe", "string", "asteroids")))
         )
 
-        val classifer = new TwoModeClassifier(twoModeSimilarityConfig, similarityRecipes)
+        val classifier = new TwoModeClassifier(twoModeSimilarityConfig, similarityRecipes)
         val currentData =
           List(
             genAlert(
@@ -68,7 +68,7 @@ object TwoModeClassifierSpec extends DefaultRunnableSpec {
           import spark.implicits._
           val loadedDf  = spark.emptyDataFrame
           val currentDf = currentData.toDF
-          classifer.classify(loadedDf, currentDf).collect.toList
+          classifier.classify(loadedDf, currentDf).collect.toList
         }
 
         assertM(app.provideLayer(sparkLayer))(

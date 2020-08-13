@@ -60,7 +60,11 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
           1,
           25000,
           List.empty,
-          EdgeRulesConfig(SimilarityConfig(""), TwoModeSimilarityConfig(List.empty))
+          EdgeRulesConfig(
+            SimilarityConfig(""),
+            TwoModeSimilarityConfig(List.empty),
+            SameValueSimilarityConfig(List.empty)
+          )
         )
       )
       val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
@@ -134,7 +138,11 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
           1,
           25000,
           List.empty,
-          EdgeRulesConfig(SimilarityConfig(""), TwoModeSimilarityConfig(List.empty))
+          EdgeRulesConfig(
+            SimilarityConfig(""),
+            TwoModeSimilarityConfig(List.empty),
+            SameValueSimilarityConfig(List.empty)
+          )
         )
       )
       val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
@@ -187,7 +195,11 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
           1,
           25000,
           List.empty,
-          EdgeRulesConfig(SimilarityConfig(""), TwoModeSimilarityConfig(List.empty))
+          EdgeRulesConfig(
+            SimilarityConfig(""),
+            TwoModeSimilarityConfig(List.empty),
+            SameValueSimilarityConfig(List.empty)
+          )
         )
       )
       val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)

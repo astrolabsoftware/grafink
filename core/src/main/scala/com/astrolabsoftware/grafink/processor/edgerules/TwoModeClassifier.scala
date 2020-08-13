@@ -21,7 +21,7 @@ import org.apache.spark.sql.{ DataFrame, Encoder, Encoders, Row }
 import com.astrolabsoftware.grafink.models.{ FixedVertex, TwoModeSimilarityConfig }
 import com.astrolabsoftware.grafink.models.GrafinkException.MissingFixedVertex
 
-case class Edge(src: Long, dst: Long, propVal: Double)
+case class TwoModeEdge(src: Long, dst: Long, propVal: Double)
 
 class TwoModeClassifier(config: TwoModeSimilarityConfig, similarityRecipes: List[FixedVertex])
     extends VertexClassifierRule {
@@ -66,13 +66,13 @@ class TwoModeClassifier(config: TwoModeSimilarityConfig, similarityRecipes: List
       rule -> recipe.head.id
     }.toMap
 
-    implicit val ec: Encoder[Edge] = Encoders.product[Edge]
+    implicit val ec: Encoder[TwoModeEdge] = Encoders.product[TwoModeEdge]
 
     val edges =
       df.flatMap { row =>
         directRules.flatMap { rule =>
           // Normal rule based connections
-          if (ruleToCondition(rule)(row)) Some(Edge(row.getAs[Long]("id"), ruleToId(rule), 0.0)) else None
+          if (ruleToCondition(rule)(row)) Some(TwoModeEdge(row.getAs[Long]("id"), ruleToId(rule), 0.0)) else None
         }
       }
 
@@ -100,7 +100,7 @@ class TwoModeClassifier(config: TwoModeSimilarityConfig, similarityRecipes: List
           val v       = row.getAs[String](colName)
           if (exactMatchRuleToId(rule).contains(v)) {
             val targetId = exactMatchRuleToId(rule)(v)
-            Some(Edge(row.getAs[Long]("id"), targetId, 0.0))
+            Some(TwoModeEdge(row.getAs[Long]("id"), targetId, 0.0))
           } else None
         }
       }
