@@ -4,7 +4,7 @@ import org.apache.spark.sql.Row
 import zio.test._
 import zio.test.Assertion._
 
-import com.astrolabsoftware.grafink.models.{ AGN, CStar, CepheId, ML, MULENS_NULL, SameValueSimilarityConfig, WDStar }
+import com.astrolabsoftware.grafink.models._
 import com.astrolabsoftware.grafink.processor.edgerules.SimilarityClassifierSpec.genAlert
 import com.astrolabsoftware.grafink.utils.SparkTestEnv
 
