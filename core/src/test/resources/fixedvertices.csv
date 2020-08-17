@@ -4,3 +4,9 @@
 4,"similarity","recipe","string","catalog","equals","string","WD*"
 5,"similarity","recipe","string","catalog","equals","string","Cepheid"
 6,"similarity","recipe","string","catalog","equals","string","AGN"
+7,"similarity","recipe","string","intrecipe","equals","int",9
+8,"similarity","recipe","string","longrecipe","equals","long",900
+9,"similarity","recipe","string","floatrecipe","equals","float",9.8
+10,"similarity","recipe","string","doublerecipe","equals","double",9.8
+11,"similarity","recipe","string","boolrecipe","equals","bool",false
+12,"similarity","recipe","string","unknownrecipe","equals","unknown","weird"

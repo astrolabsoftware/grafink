@@ -167,7 +167,20 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
       val layer = TestConsole.debug ++ vertexProcessorLayer ++ logger ++ sparkLayer ++ fixedVertexDataReaderLayer
 
       assertM(app.provideLayer(layer))(
-        hasSameElementsDistinct(List("supernova", "microlensing", "asteroids", "catalog"))
+        hasSameElementsDistinct(
+          List(
+            "supernova",
+            "microlensing",
+            "asteroids",
+            "catalog",
+            "intrecipe",
+            "longrecipe",
+            "floatrecipe",
+            "doublerecipe",
+            "boolrecipe",
+            "unknownrecipe"
+          )
+        )
       )
     },
     testM("VertexProcessor will correctly delete already added input alerts into janusgraph") {

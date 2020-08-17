@@ -48,6 +48,54 @@ object FixedVertexDataReaderSpec extends DefaultRunnableSpec {
                 FixedVertexProperty("recipe", "string", "catalog"),
                 FixedVertexProperty("equals", "string", AGN.name)
               )
+            ),
+            FixedVertex(
+              7L,
+              "similarity",
+              List(
+                FixedVertexProperty("recipe", "string", "intrecipe"),
+                FixedVertexProperty("equals", "int", 9: java.lang.Integer)
+              )
+            ),
+            FixedVertex(
+              8L,
+              "similarity",
+              List(
+                FixedVertexProperty("recipe", "string", "longrecipe"),
+                FixedVertexProperty("equals", "long", 900L: java.lang.Long)
+              )
+            ),
+            FixedVertex(
+              9L,
+              "similarity",
+              List(
+                FixedVertexProperty("recipe", "string", "floatrecipe"),
+                FixedVertexProperty("equals", "float", 9.8f: java.lang.Float)
+              )
+            ),
+            FixedVertex(
+              10L,
+              "similarity",
+              List(
+                FixedVertexProperty("recipe", "string", "doublerecipe"),
+                FixedVertexProperty("equals", "double", 9.8: java.lang.Double)
+              )
+            ),
+            FixedVertex(
+              11L,
+              "similarity",
+              List(
+                FixedVertexProperty("recipe", "string", "boolrecipe"),
+                FixedVertexProperty("equals", "bool", false: java.lang.Boolean)
+              )
+            ),
+            FixedVertex(
+              12L,
+              "similarity",
+              List(
+                FixedVertexProperty("recipe", "string", "unknownrecipe"),
+                FixedVertexProperty("equals", "unknown", "weird")
+              )
             )
           )
         )
