@@ -12,16 +12,16 @@ object SimilarityExpParserSpec extends DefaultRunnableSpec {
     suite("SimilarityExpParserSpec")(
       test("Similarity expression parser will correctly parse given expression part I") {
 
-        val exp    = "(rfscore AND snnscore) OR objectId"
+        val exp    = "(rfscore AND snn_snia_vs_nonia) OR objectId"
         val result = SimilarityExpParser.parse(exp)
         assert(result)(
           equalTo(
             ParseResult(
               (((col("rfscore1") > 0.9) && (col("rfscore2") > 0.9)) &&
-                ((col("snnscore1") > 0.9) && (col("snnscore2") > 0.9))) || (col("objectId1") <=> col(
+                ((col("snn_snia_vs_nonia1") > 0.9) && (col("snn_snia_vs_nonia2") > 0.9))) || (col("objectId1") <=> col(
                 "objectId2"
               )),
-              List("rfscore", "snnscore", "objectId")
+              List("rfscore", "snn_snia_vs_nonia", "objectId")
             )
           )
         )
@@ -46,13 +46,13 @@ object SimilarityExpParserSpec extends DefaultRunnableSpec {
         )
       },
       test("Similarity expression parser will correctly parse given expression part III") {
-        val exp    = "(rfscore AND snnscore) OR (mulens OR classtar OR roid OR cdsxmatch OR objectId)"
+        val exp    = "(rfscore AND snn_snia_vs_nonia) OR (mulens OR classtar OR roid OR cdsxmatch OR objectId)"
         val result = SimilarityExpParser.parse(exp)
         assert(result)(
           equalTo(
             ParseResult(
               (((col("rfscore1") > 0.9) && (col("rfscore2") > 0.9)) &&
-                ((col("snnscore1") > 0.9) && (col("snnscore2") > 0.9))) ||
+                ((col("snn_snia_vs_nonia1") > 0.9) && (col("snn_snia_vs_nonia2") > 0.9))) ||
                 ((((col("mulens_class_11") === "ML") && (col("mulens_class_21") === "ML")) &&
                   ((col("mulens_class_12") === "ML") && (col("mulens_class_22") === "ML"))) ||
                   (((col("classtar1") > 0.9) && (col("classtar2") > 0.9)) || ((col("classtar1") < 0.1) && (col(
@@ -61,7 +61,7 @@ object SimilarityExpParserSpec extends DefaultRunnableSpec {
                   ((col("roid1") > 1) && (col("roid2") > 1)) ||
                   ((col("cdsxmatch1") =!= "Unknown") && (col("cdsxmatch1") === col("cdsxmatch2"))) ||
                   (col("objectId1") <=> col("objectId2"))),
-              List("rfscore", "snnscore", "mulens", "classtar", "roid", "cdsxmatch", "objectId")
+              List("rfscore", "snn_snia_vs_nonia", "mulens", "classtar", "roid", "cdsxmatch", "objectId")
             )
           )
         )

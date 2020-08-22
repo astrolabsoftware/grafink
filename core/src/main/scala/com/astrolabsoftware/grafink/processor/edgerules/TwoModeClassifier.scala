@@ -26,7 +26,7 @@ case class TwoModeEdge(src: Long, dst: Long, propVal: Double)
 class TwoModeClassifier(config: TwoModeSimilarityConfig, similarityRecipes: List[FixedVertex])
     extends VertexClassifierRule {
 
-  val scoreCond: Row => Boolean = r => (r.getAs[Double]("rfscore") > 0.9) && (r.getAs[Double]("snnscore") > 0.9)
+  val scoreCond: Row => Boolean = r => (r.getAs[Double]("rfscore") > 0.9) && (r.getAs[Double]("snn_snia_vs_nonia") > 0.9)
   val roidCond: Row => Boolean  = r => r.getAs[Int]("roid") > 1
   val mulensmlCond: Row => Boolean = r =>
     (r.getAs[String]("mulens_class_1") == "ML") && (r.getAs[String]("mulens_class_2") == "ML")

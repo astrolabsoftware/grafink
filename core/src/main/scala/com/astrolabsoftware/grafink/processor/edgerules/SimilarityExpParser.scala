@@ -61,7 +61,7 @@ object SimilarityExpParser {
 
   def colName[_: P]: P[ParseResult] =
     P(
-      CharIn("a-zA-Z")
+      CharIn("a-zA-Z_")
     ).rep(1).!.map(name => ParseResult(colNameToCondition(name), columns = List(name)))
 
   def ws[_: P]: P[Unit] = P(" ".rep(1))
@@ -93,7 +93,7 @@ object SimilarityExpParser {
 
   /**
    * A parser implementation using fastparse for parsing similarity expressions like
-   * * (rfscore AND snnscore) OR mulens
+   * * (rfscore AND snn_snia_vs_nonia) OR mulens
    */
   // TODO: Wrap it over ZIO and handle the failure cases
   def parse(expr: String): ParseResult =
@@ -119,7 +119,7 @@ object SimilarityExpParser {
    * Map from column base name to similarity condition
    */
   val fieldToSimilarityCondtitionMap: Map[String, (Column, Column) => Column] = Map(
-    "snnscore"  -> scoreCond,
+    "snn_snia_vs_nonia"  -> scoreCond,
     "rfscore"   -> scoreCond,
     "cdsxmatch" -> cdsxmatchCond,
     "roid"      -> roidCond,

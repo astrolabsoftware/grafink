@@ -32,7 +32,7 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
       val edgeLabel         = "similarity"
       val taskSize          = 2500
       val parallelismConfig = 10
-      val similarityConfig  = SimilarityConfig("(rfscore AND snnscore) OR objectId")
+      val similarityConfig  = SimilarityConfig("(rfscore AND snn_snia_vs_nonia) OR objectId")
       val janusConfig =
         JanusGraphConfig(
           JanusGraphStorageConfig("", 0, tableName = "test", List.empty),
@@ -40,7 +40,7 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
         )
       val jobConfig = GrafinkJobConfig(
         SchemaConfig(
-          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snnscore", "objectId"))),
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snn_snia_vs_nonia", "objectId"))),
           edgeLabels = List(EdgeLabelConfig(name = edgeLabel, List(PropertySchema(name = "value", typ = "long")))),
           index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
         ),
@@ -66,11 +66,11 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
       val logger           = Logger.test
       val edgeLabel        = "similarity"
       val edgePropertyKey  = "value"
-      val similarityConfig = SimilarityConfig("(rfscore AND snnscore) OR objectId")
+      val similarityConfig = SimilarityConfig("(rfscore AND snn_snia_vs_nonia) OR objectId")
 
       val readerConfig =
         ZLayer.succeed(
-          ReaderConfig(path, Parquet, keepCols = List("rfscore", "snnscore", "objectId"), keepColsRenamed = List())
+          ReaderConfig(path, Parquet, keepCols = List("rfscore", "snn_snia_vs_nonia", "objectId"), keepColsRenamed = List())
         )
       val janusConfig =
         JanusGraphConfig(
@@ -79,7 +79,7 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
         )
       val jobConfig = GrafinkJobConfig(
         SchemaConfig(
-          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snnscore", "objectId"))),
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snn_snia_vs_nonia", "objectId"))),
           edgeLabels = List(EdgeLabelConfig(name = edgeLabel, List(PropertySchema(name = "value", typ = "long")))),
           index = IndexConfig(
             composite = List.empty,

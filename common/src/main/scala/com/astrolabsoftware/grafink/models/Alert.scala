@@ -25,6 +25,7 @@ case object CepheId           extends Cdsxmatch("Cepheid")
 case object EllipVar          extends Cdsxmatch("EllipVar")
 case object AGN               extends Cdsxmatch("AGN")
 case object CStar             extends Cdsxmatch("C*")
+case object EBStar            extends Cdsxmatch("EB*")
 
 sealed abstract class Mulens(val name: String)
 
@@ -37,19 +38,19 @@ case object CONSTANT    extends Mulens("CONSTANT")
 case class Candidate(jd: Double, programid: Int, candid: Long)
 
 case class Alert(
-  id: Long,
-  objectId: String,
-  candidate: Candidate,
-  cdsxmatch: String,
-  rfscore: Double,
-  snnscore: Double,
-  classtar: Double,
-  roid: Int,
-  mulens_class_1: Option[String] = None,
-  mulens_class_2: Option[String] = None,
-  year: Int,
-  month: Int,
-  day: Int
+    id: Long,
+    objectId: String,
+    candidate: Candidate,
+    cdsxmatch: String,
+    rfscore: Double,
+    snn_snia_vs_nonia: Double,
+    classtar: Double,
+    roid: Int,
+    mulens_class_1: Option[String] = None,
+    mulens_class_2: Option[String] = None,
+    year: Int,
+    month: Int,
+    day: Int
 )
 
 object Alert {}

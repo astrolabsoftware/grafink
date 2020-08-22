@@ -37,7 +37,7 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
       val objectIdIndex = "objectIdIndex"
       val readerConfig =
         ZLayer.succeed(
-          ReaderConfig(path, Parquet, keepCols = List("rfscore", "snnscore", "objectId"), keepColsRenamed = List())
+          ReaderConfig(path, Parquet, keepCols = List("rfscore", "snn_snia_vs_nonia", "objectId"), keepColsRenamed = List())
         )
       val janusConfig =
         JanusGraphConfig(
@@ -46,7 +46,7 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
         )
       val jobConfig = GrafinkJobConfig(
         SchemaConfig(
-          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snnscore", "objectId"))),
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snn_snia_vs_nonia", "objectId"))),
           edgeLabels = List(),
           IndexConfig(
             composite = List(CompositeIndex(name = objectIdIndex, properties = List("objectId"))),
@@ -124,7 +124,7 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
         )
       val jobConfig = GrafinkJobConfig(
         SchemaConfig(
-          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snnscore", "objectId"))),
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snn_snia_vs_nonia", "objectId"))),
           edgeLabels = List(),
           IndexConfig(
             composite = List(CompositeIndex(name = objectIdIndex, properties = List("objectId"))),
@@ -198,7 +198,7 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
 
       val jobConfig = GrafinkJobConfig(
         SchemaConfig(
-          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snnscore"))),
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snn_snia_vs_nonia"))),
           edgeLabels = List(),
           index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
         ),
