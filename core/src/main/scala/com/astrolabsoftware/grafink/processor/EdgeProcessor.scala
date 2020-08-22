@@ -104,41 +104,33 @@ final case class EdgeProcessorLive(config: GrafinkJanusGraphConfig) extends Edge
     propertyKey: String,
     partition: Iterator[Row]
   ): ZIO[Any, Throwable, Unit] = {
-    val batchSize = config.edgeLoader.batchSize
     val idManager = graph.asInstanceOf[StandardJanusGraph].getIDManager
-    val kgroup    = partition.grouped(batchSize)
-    val l = kgroup.map(group =>
+    val l = partition.map { r =>
+
+      val propertyVal = r.getAs[AnyVal](EdgeColumns.PROPERTYVALFIELD)
+
       for {
         g <- ZIO.effect(graph.traversal())
-        _ <- ZIO.collectAll_(
-          group.map {
-            r =>
-              val propertyVal = r.getAs[AnyVal](EdgeColumns.PROPERTYVALFIELD)
 
-              // TODO: Optimize
-              for {
-                srcVertex <- ZIO.effect(
-                  g.V(java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long](EdgeColumns.SRCVERTEXFIELD))))
-                )
-                dstVertex <- ZIO.effect(
-                  g.V(java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long](EdgeColumns.DSTVERTEXFIELD))))
-                )
-                _ <- ZIO.effect(srcVertex.addE(label).to(dstVertex).property(propertyKey, propertyVal).iterate)
-                // Add reverse edge as well
-                rSrcVertex <- ZIO.effect(
-                  g.V(java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long](EdgeColumns.SRCVERTEXFIELD))))
-                )
-                rDstVertex <- ZIO.effect(
-                  g.V(java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long](EdgeColumns.DSTVERTEXFIELD))))
-                )
-                _ <- ZIO.effect(rDstVertex.addE(label).to(rSrcVertex).property(propertyKey, propertyVal).iterate)
-                _ <- ZIO.effect(g.tx.commit)
-              } yield ()
-          }
+        srcVertex <- ZIO.effect(
+          g.V(java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long](EdgeColumns.SRCVERTEXFIELD))))
         )
+        dstVertex <- ZIO.effect(
+          g.V(java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long](EdgeColumns.DSTVERTEXFIELD))))
+        )
+        _ <- ZIO.effect(srcVertex.addE(label).to(dstVertex).property(propertyKey, propertyVal).iterate)
+        // Add reverse edge as well
+        rSrcVertex <- ZIO.effect(
+          g.V(java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long](EdgeColumns.SRCVERTEXFIELD))))
+        )
+        rDstVertex <- ZIO.effect(
+          g.V(java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long](EdgeColumns.DSTVERTEXFIELD))))
+        )
+        _ <- ZIO.effect(rDstVertex.addE(label).to(rSrcVertex).property(propertyKey, propertyVal).iterate)
+        _ <- ZIO.effect(g.tx.commit)
         _ <- ZIO.effect(g.close)
       } yield ()
-    )
+    }
     for {
       _ <- ZIO.collectAll_(l.toIterable)
       // Additional commit if anything left
