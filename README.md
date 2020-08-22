@@ -171,6 +171,7 @@ job {
   }
   // VertexLoader batch settings
   vertexLoader {
+    // Currently not being used, intended to batch the janusgraph vertex loading transactions
     batchSize = 100
     // The vertices created from the data will be labelled as this label
     label = "alert"
@@ -181,7 +182,9 @@ job {
   }
   // EdgeLoader settings
   edgeLoader = {
+    // Currently not being used, intended to batch the janusgraph edge loading transactions
     batchSize = 100
+    // Default parallelism for loading edges when the total edges to be loaded per classifier is less than taskSize
     parallelism = 10
     taskSize = 25000
     // This config defines the rules to be applied for creating edges in the graph.
@@ -257,8 +260,6 @@ the last max.
 Loads the vertices using custom ids into Janusgraph. Each alert data row is ingested as a vertex.
 The alert data is processed as a dataframe, and then for each partition of the dataframe, an embedded
 instance of janusgraph is created, and they are loaded parallely from spark executors.
-Each partition while loading the vertices will add ```vertexLoader.batchSize``` vertices
-to the transaction before committing and the loading continues in this way.
 
 ### EdgeProcessor
 
@@ -269,8 +270,6 @@ where each row represents an edge to be added.
 Each sets of these edges are then converted into JanusGraph edges.
 
 Like the VertexProcessor, EdgeProcessor will also load edge partitions in parallel.
-Each partition, while loading the edges will add ```edgeLoader.batchSize``` edges to
-the transaction before committing and the loading continues in this way.
 The ```edgeLoader.parallelism``` controls the number of partitions being loaded in parallel,
 in case the number of edges to load is less than ```edgeLoader.taskSize```. In case edges to load
 are more than that, number of partitions are calculated as ```(number of edges to load / edgeLoader.taskSize) + 1```
