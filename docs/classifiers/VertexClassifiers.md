@@ -94,10 +94,13 @@ For example here is the resultant edges in a graph to which TwoModeClassifier ru
 
 ## SameValueClassifier
 
-This classifier will link vertices having exact same vertex property values for a given vertex property for eg: ```objectId```. Computing these edges requires an inner join between data to be loaded and existing data in the graph, so need to be careful which property to configure for this classifier.
+This classifier will link vertices having exact same vertex property values for a given vertex property for eg: ```objectId```.
 This creates edges between the vertices with label ```exactmatch``` (which is defined in ```application.conf```), with a property ```propertname``` which stores the name of the property which is equal in the connected vertices. So if we apply this rule on vertex property ```objectId```, then
 each resultant edge will have a property called ```propertyname``` with value set to ```objectId```.
 This rule can actually be passed a list of vertex property names, and for each of these properties, a set of edges connecting vertices with same value will be created (with the corresponding ```propertname``` value)
+
+Out of the classifiers described here, this is the most generic, which can be applied over any vertex property of the dataset being loaded, and is not specific to grafink use case.
+Note that computing these edges requires an inner join between data to be loaded and existing data in the graph, so need to be careful which property to configure for this classifier.
 
 For example here is the resultant edges in a graph to which SameValueClassfier rule has been applied:
 
