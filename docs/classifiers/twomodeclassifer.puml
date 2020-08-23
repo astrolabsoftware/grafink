@@ -1,0 +1,108 @@
+@startuml
+skinparam sequenceMessageAlign center
+title TwoModeClassifier
+
+usecase V1 as "
+
+
+= v1
+=== rfscore = 0.917
+=== snn_snia_vs_nonia = 0.998
+objectId = ZTF17aaadara
+==== roid = 2
+cdsxmatch = EB*
+
+
+"
+usecase V2 as "
+
+
+= v2
+=== rfscore = 0.954
+=== snn_snia_vs_nonia = 0.978
+objectId = ZTF18aaacpwn
+==== roid = 2
+cdsxmatch = EB*
+
+
+"
+usecase V3 as "
+
+
+= v3
+rfscore = 0.961
+snn_snia_vs_nonia = 0.3
+objectId = ZTF18aaacpwn
+roid = 0
+cdsxmatch = EB*
+
+
+"
+usecase V4 as "
+
+
+= v4
+rfscore = 0.789
+snn_snia_vs_nonia = 0.245
+objectId = ZTF18abpubcn
+==== roid = 3
+cdsxmatch = EB*
+
+
+"
+usecase V5 as "
+
+
+= v5
+rfscore = 0.815
+snn_snia_vs_nonia = 0.9
+objectId = ZTF18aaaccvv
+roid = 0
+cdsxmatch = WD*
+
+
+"
+
+usecase S1 #yellow as "
+
+
+= S1
+recipe = supernova
+
+
+"
+usecase S2 #yellow as "
+
+
+= S2
+recipe = microlensing
+
+
+"
+usecase S3 #yellow as "
+
+
+= S3
+recipe = asteroids
+
+
+"
+usecase S4 #yellow as "
+
+
+= S4
+recipe = catalog
+equals = WD*
+
+
+"
+
+V1 <--> S1: satr
+V1 <--> S3: satr
+V2 <--> S1: satr
+V2 <--> S3: satr
+V4 <--> S3: satr
+V5 <--> S4: satr
+S1 -[hidden]--> S2
+S1 -[hidden]--> V3
+@enduml

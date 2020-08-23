@@ -189,7 +189,7 @@ job {
     taskSize = 25000
     // This config defines the rules to be applied for creating edges in the graph.
     // Note that each rule specified here will add a SET of edges to the graph, as described
-    // by the algorithm of the rule
+    // by the algorithm of the rule (see VertexClassifiers)
     rulesToApply = ["twoModeClassifier", "sameValueClassifier"]
     // Configurations for each of the supported rules that can be applied to generate edges in the graph
     // See the section on VertexClassifer to read more about these
@@ -278,27 +278,9 @@ are more than that, number of partitions are calculated as ```(number of edges t
 
 VertexClassifiers are rules, each of which creates a set of edges in the graph.
 In grafink we can configure any number of such rules to add edges to the graph, when ingesting data.
-Currently supported rules to generate edges are described below.
 
-#### SimilarityClassifer
-
-This rule generates an edge between 2 alerts if one or more of the columns match,
-as specified by a ```similarity``` expression.
-The ```similarity``` expression is described in terms of column names, AND and OR operators.
-For eg: given an expression ```(rfscore AND snnscore) OR objectId```, the rule will create an edge if
-the ```rfscore``` and ```snnscore``` match or ```objectId``` match.
-
-The definition for a 'match' varies per column:
-
-| Column Name | Match Condition |
-|-------------|-----------------|
-|rfscore|<code>rfscore1 > 0.9 && rfscore2 > 0.9</code>|
-|snnscore|<code>snnscore1 > 0.9 && snnscore2 > 0.9</code>|
-|cdsxmatch|<code>(cdsxmatch1 =!= "Unknown") && (cdsxmatch1 === cdsxmatch2)</code>|
-|roid|<code>(roid1, roid2) => (roid1 > 1) && (roid2 > 1)</code>|
-|mulens|<code>(mulens1_class_1 === "ML" && mulens1_class_2 === "ML") && (mulens2_class_1 === "ML" && mulens2_class_2 === "ML")</code>|
-
-Here the column name followed by 1 or 2 specifies the column for the first or the second row being matched.
+Supported classifiers are described in detail in this document: [VertexClassifiers](docs/classifiers/VertexClassifiers.md)
+Any of the supported classifiers can be configured as a rule to be applied to create the corresponding edges in the graph.
 
 ### Compiling from source
 
