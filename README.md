@@ -2,21 +2,30 @@
 [![Build Status](https://travis-ci.org/astrolabsoftware/grafink.svg?branch=master)](https://travis-ci.org/astrolabsoftware/grafink)
 [![codecov](https://codecov.io/gh/astrolabsoftware/grafink/branch/master/graph/badge.svg?style=platic)](https://codecov.io/gh/astrolabsoftware/grafink)
 
-Grafink is a spark ETL job to bulk load data into JanusGraph. It was created to load [Fink](https://fink-broker.org/) data into JanusGraph.
+Grafink is a data loading and analysis tool for loading and analysing data into / from JanusGraph. It was created to load [Fink](https://fink-broker.org/) data into JanusGraph.
 
-The Architecture is described [here](docs/Architecture.md)
+Grafink has 3 components in general
 
-Grafink is highly configurable. It has 4 major components:
+1. Api : This module exposes a REST interface on top of the loaded data in JanusGraph. The source is in ```api``` folder
+2. Core: This is the Spark job that helps in loading data into Janusgraph. The source is in ```core``` folder.
+The Architecture of the core job is described [here](docs/Architecture.md)
+3. Shell: This provides a scala REPL for ad-hoc data analysis of the loaded data. This uses same configuration as the core module.
+The source is in ```core/src/scala/com/astrolabsoftware/grafink/shell``` folder
+
+## Grafink Core
+
+Grafink Core is highly configurable. It has 5 major components:
 
 1. SchemaLoader: Loads the graph schema to the configured storage backend.
 2. IDManager: Maintains external copy of data with the custom ids generated for loading the vertices
 3. VertexProcessor: Loads the vertices data into JanusGraph.
 4. EdgeProcessor: Creates edges between the loaded vertices based on specified rules.
+5. VertexClassifier: These are classes that describe an algorithm for connecting vertices, thereby
+introducing a set of edges in the graph.
 
+### Configuration
 
-## Configuration
-
-There are a number of configuration options using which we can customize grafink.
+There are a number of configuration options using which we can customize grafink core job.
 Here is a sample config file with example options and inline comments for explanation
 
 ```hocon
@@ -26,8 +35,8 @@ reader {
   basePath = "/test/base/path"
   // Format of the data to read
   format = "parquet"
-  // Columns to keep when reading the data, since we migt not be interested in all the data
-  keepCols = ["objectId", "schemavsn", "publisher", "fink_broker_version", "fink_science_version", "candidate", "cdsxmatch", "rfscore", "snnscore", "roid"]
+  // Columns to keep when reading the data, since we might not be interested in all the data
+  keepCols = ["objectId", "schemavsn", "publisher", "fink_broker_version", "fink_science_version", "candidate", "cdsxmatch", "rfscore", "snn_snia_vs_nonia", "roid"]
   // Renames a few columns after reading, to simplify processing
   keepColsRenamed =
     [ { "f": "mulens.class_1", "t": "mulens_class_1" },
@@ -35,14 +44,28 @@ reader {
       { "f": "cutoutScience.stampData", "t": "cutoutScience" },
       { "f": "cutoutTemplate.stampData", "t": "cutoutTemplate" },
       { "f": "cutoutDifference.stampData", "t": "cutoutDifference" },
-      { "f": "candidate.classtar", "t": "classtar" }
+      { "f": "candidate.classtar", "t": "classtar" },
+      { "f": "candidate.jd", "t": "jd" }
     ]
+  // Adds new columns to the data by applying specified sql expression on existing columns
+  // The columns being passed to the expression can be renamed columns as mentioned above as well
+  // For eg: below adds a 'rowkey' column to the data by concating objectId and jd columns
+  // where jd is a renamed column mentioned above
+  newCols = [
+    { "name": "rowkey", "expr": "objectId || '_' || jd as rowkey" }
+  ]
 }
 
 // IDManager options
 idManager {
   // This is used by IDManagerSparkService to store the data along with generated ids
   spark {
+    // This introduces a reserved space for custom id generated for loading the data
+    // This is reserved for adding some fixed vertices to the graph, different from the data being loaded,
+    // for example for adding 'similarity' vertices for specific recipes to which the data (alert) vertices
+    // can be connected via edges later.
+    // So in this case, custom ids will be generated from 201 onwards instead of 1
+    reservedIdSpace = 200
     // The base path where data will be generated. Note that partitioning of the original data is maintained
     dataPath = "/test/intermediate/base/path"
     // Whether to clear IDManager data when running grafink in delete mode to delete data from JanusGraph
@@ -59,15 +82,50 @@ idManager {
   }
 }
 
-// Options specific to JanusGraph, vertex and edge loaders
-janusgraph {
+// Options specific to data loading job, vertex and edge loaders
+job {
   // Specifies the schema of the vertices to be loaded
   schema {
-    // These columns from data will be converted to vertex properties in the graph
-    vertexPropertyCols = ["rfscore", "snnscore", "mulens_class_1", "mulens_class_2",
-      "cdsxmatch", "roid", "objectId"]
-    // Currently only one vertex label with label `alert` will be created
-    vertexLabel = "alert"
+    // These vertex labels will be created together with the specified properties
+    vertexLabels = [
+          {
+            // Vertex label name
+            name = "alert"
+            // Here we can specify any property that we want to create, which is not present in the data
+            properties = []
+            // These columns from data will be converted to vertex properties in the graph
+            propertiesFromData = [
+              "rfscore",
+              "snn_snia_vs_nonia",
+              "mulens_class_1",
+              "mulens_class_2",
+              "cdsxmatch",
+              "roid",
+              "classtar",
+              "objectId",
+              "rowkey",
+              "candid",
+              "jd",
+              "magpsf",
+              "sigmapsf"
+            ]
+          },
+          {
+            name = "similarity"
+            // So these 2 properties will be created for similarity vertex label
+            properties = [
+              {
+                name = "recipe"
+                typ = "string"
+              },
+              {
+                name = "equals"
+                typ = "string"
+              }
+            ]
+            propertiesFromData = []
+          }
+        ]
     // List of edge labels and their properties to be created
     edgeLabels = [
       {
@@ -113,16 +171,37 @@ janusgraph {
   }
   // VertexLoader batch settings
   vertexLoader {
+    // Currently not being used, intended to batch the janusgraph vertex loading transactions
     batchSize = 100
+    // The vertices created from the data will be labelled as this label
+    label = "alert"
+    // This config specifies path to a file that describes certain fixed vertices
+    // that will be created before loading the data. There is a check in place to make sure these vertices
+    // are not added again on every run.
+    fixedVertices = "/fixedvertices.csv"
   }
   // EdgeLoader settings
   edgeLoader = {
+    // Currently not being used, intended to batch the janusgraph edge loading transactions
     batchSize = 100
+    // Default parallelism for loading edges when the total edges to be loaded per classifier is less than taskSize
     parallelism = 10
     taskSize = 25000
+    // This config defines the rules to be applied for creating edges in the graph.
+    // Note that each rule specified here will add a SET of edges to the graph, as described
+    // by the algorithm of the rule (see VertexClassifiers)
+    rulesToApply = ["twoModeClassifier", "sameValueClassifier"]
+    // Configurations for each of the supported rules that can be applied to generate edges in the graph
+    // See the section on VertexClassifer to read more about these
     rules {
       similarityClassifer {
         similarityExp = "(rfscore AND snnscore) OR mulens OR cdsxmatch OR objectId OR roid"
+      }
+      twoModeClassifier {
+        recipes = ["supernova", "microlensing", "catalog", "asteroids"]
+      }
+      sameValueClassifier {
+        colsToConnect = ["objectId"]
       }
     }
   }
@@ -153,7 +232,7 @@ hbase {
 }
 ```
 
-## SchemaLoader
+### SchemaLoader
 
 The schema model is described [here](docs/Schema-Model.md)
 Grafink tries to take advantage of bulk-loading feature in Janusgraph and disables
@@ -169,22 +248,20 @@ The supported Graph Elements while creating the schema include
 There is a mechanism to check if the schema in the target storage table already exists
 and then load the schema only if needed.
 
-## IDManager
+### IDManager
 
 Grafink generates custom ids to load vertices into JanusGraph. ```IDManager``` will generate
 these custom ids and maintain the loaded data along with these ids.
 When new data is loaded, it gets the max last id used and then adds the new ids starting from
 the last max.
 
-## VertexProcessor
+### VertexProcessor
 
 Loads the vertices using custom ids into Janusgraph. Each alert data row is ingested as a vertex.
 The alert data is processed as a dataframe, and then for each partition of the dataframe, an embedded
 instance of janusgraph is created, and they are loaded parallely from spark executors.
-Each partition while loading the vertices will add ```vertexLoader.batchSize``` vertices
-to the transaction before committing and the loading continues in this way.
 
-## EdgeProcessor
+### EdgeProcessor
 
 The EdgeProcessor will load edges between the generated vertices as well as between generated and old vertices
 in the graph.
@@ -193,33 +270,17 @@ where each row represents an edge to be added.
 Each sets of these edges are then converted into JanusGraph edges.
 
 Like the VertexProcessor, EdgeProcessor will also load edge partitions in parallel.
-Each partition, while loading the edges will add ```edgeLoader.batchSize``` edges to
-the transaction before committing and the loading continues in this way.
 The ```edgeLoader.parallelism``` controls the number of partitions being loaded in parallel,
 in case the number of edges to load is less than ```edgeLoader.taskSize```. In case edges to load
 are more than that, number of partitions are calculated as ```(number of edges to load / edgeLoader.taskSize) + 1```
 
-Currently supported rules to generate edges are described below.
+### VertexClassifer
 
-### SimilarityClassifer
+VertexClassifiers are rules, each of which creates a set of edges in the graph.
+In grafink we can configure any number of such rules to add edges to the graph, when ingesting data.
 
-This rule generates an edge between 2 alerts if one or more of the columns match,
-as specified by a ```similarity``` expression.
-The ```similarity``` expression is described in terms of column names, AND and OR operators.
-For eg: given an expression ```(rfscore AND snnscore) OR objectId```, the rule will create an edge if
-the ```rfscore``` and ```snnscore``` match or ```objectId``` match.
-
-The definition for a 'match' varies per column:
-
-| Column Name | Match Condition |
-|-------------|-----------------|
-|rfscore|<code>rfscore1 > 0.9 && rfscore2 > 0.9</code>|
-|snnscore|<code>snnscore1 > 0.9 && snnscore2 > 0.9</code>|
-|cdsxmatch|<code>(cdsxmatch1 =!= "Unknown") && (cdsxmatch1 === cdsxmatch2)</code>|
-|roid|<code>(roid1, roid2) => (roid1 > 1) && (roid2 > 1)</code>|
-|mulens|<code>(mulens1_class_1 === "ML" && mulens1_class_2 === "ML") && (mulens2_class_1 === "ML" && mulens2_class_2 === "ML")</code>|
-
-Here the column name followed by 1 or 2 specifies the column for the first or the second row being matched.
+Supported classifiers are described in detail in this document: [VertexClassifiers](docs/classifiers/VertexClassifiers.md)
+Any of the supported classifiers can be configured as a rule to be applied to create the corresponding edges in the graph.
 
 ### Compiling from source
 

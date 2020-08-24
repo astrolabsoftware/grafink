@@ -33,7 +33,11 @@ case class HBaseZookeeperConfig(quoram: String)
 
 case class HBaseConfig(zookeeper: HBaseZookeeperConfig)
 
-case class EdgeLabelConfig(name: String, properties: Map[String, String])
+case class PropertySchema(name: String, typ: String)
+
+case class VertexLabelConfig(name: String, properties: List[PropertySchema], propertiesFromData: List[String])
+
+case class EdgeLabelConfig(name: String, properties: List[PropertySchema])
 
 case class CompositeIndex(name: String, properties: List[String])
 
@@ -44,19 +48,28 @@ case class EdgeIndex(name: String, properties: List[String], label: String)
 case class IndexConfig(composite: List[CompositeIndex], mixed: List[MixedIndex], edge: List[EdgeIndex])
 
 case class SchemaConfig(
-  vertexPropertyCols: List[String],
-  vertexLabel: String,
+  vertexLabels: List[VertexLabelConfig],
+  // vertexPropertyCols: List[String],
+  // vertexLabel: String,
   edgeLabels: List[EdgeLabelConfig],
   index: IndexConfig
 )
 
-case class VertexLoaderConfig(batchSize: Int)
+case class FixedVertexProperty(name: String, datatype: String, value: AnyRef)
+
+case class FixedVertex(id: Long, label: String, properties: List[FixedVertexProperty])
+
+case class VertexLoaderConfig(batchSize: Int, label: String, fixedVertices: String)
 
 case class SimilarityConfig(similarityExp: String)
 
-case class EdgeRulesConfig(similarityClassifer: SimilarityConfig)
+case class TwoModeSimilarityConfig(recipes: List[String])
 
-case class EdgeLoaderConfig(batchSize: Int, parallelism: Int, taskSize: Int, rules: EdgeRulesConfig)
+case class SameValueSimilarityConfig(colsToConnect: List[String])
+
+case class EdgeRulesConfig(similarityClassifer: SimilarityConfig, twoModeClassifier: TwoModeSimilarityConfig, sameValueClassifier: SameValueSimilarityConfig)
+
+case class EdgeLoaderConfig(batchSize: Int, parallelism: Int, taskSize: Int, rulesToApply: List[String], rules: EdgeRulesConfig)
 
 case class JanusGraphStorageConfig(host: String, port: Int, tableName: String, extraConf: List[String])
 
@@ -78,7 +91,7 @@ case class GrafinkJanusGraphConfig(
   janusGraph: JanusGraphConfig
 )
 
-case class IDManagerSparkConfig(dataPath: String, clearOnDelete: Boolean)
+case class IDManagerSparkConfig(reservedIdSpace: Int, dataPath: String, clearOnDelete: Boolean)
 
 case class HBaseColumnConfig(tableName: String, cf: String, qualifier: String)
 

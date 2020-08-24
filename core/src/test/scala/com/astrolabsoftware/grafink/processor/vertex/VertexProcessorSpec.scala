@@ -1,4 +1,4 @@
-package com.astrolabsoftware.grafink.processor
+package com.astrolabsoftware.grafink.processor.vertex
 
 import java.time.LocalDate
 
@@ -6,12 +6,12 @@ import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
-import org.apache.spark.sql.types.{ DoubleType, LongType, StringType, StructField, StructType }
+import org.apache.spark.sql.types._
 import org.apache.tinkerpop.gremlin.structure.T
 import org.janusgraph.graphdb.database.StandardJanusGraph
 import zio.{ ZIO, ZLayer }
-import zio.test.{ DefaultRunnableSpec, _ }
-import zio.test.Assertion._
+import zio.test._
+import zio.test.Assertion.{ equalTo, hasSameElementsDistinct }
 import zio.test.environment.TestConsole
 
 import com.astrolabsoftware.grafink.common.{ PaddedPartitionManager, Utils }
@@ -37,7 +37,7 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
       val objectIdIndex = "objectIdIndex"
       val readerConfig =
         ZLayer.succeed(
-          ReaderConfig(path, Parquet, keepCols = List("rfscore", "snnscore", "objectId"), keepColsRenamed = List())
+          ReaderConfig(path, Parquet, keepCols = List("rfscore", "snn_snia_vs_nonia", "objectId"), keepColsRenamed = List())
         )
       val janusConfig =
         JanusGraphConfig(
@@ -46,8 +46,7 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
         )
       val jobConfig = GrafinkJobConfig(
         SchemaConfig(
-          vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
-          vertexLabel = "type",
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snn_snia_vs_nonia", "objectId"))),
           edgeLabels = List(),
           IndexConfig(
             composite = List(CompositeIndex(name = objectIdIndex, properties = List("objectId"))),
@@ -55,8 +54,18 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
             edge = List.empty
           )
         ),
-        VertexLoaderConfig(10),
-        EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig("")))
+        VertexLoaderConfig(10, "alert", ""),
+        EdgeLoaderConfig(
+          10,
+          1,
+          25000,
+          List.empty,
+          EdgeRulesConfig(
+            SimilarityConfig(""),
+            TwoModeSimilarityConfig(List.empty),
+            SameValueSimilarityConfig(List.empty)
+          )
+        )
       )
       val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
       val tempDirServiceLayer     = ((zio.console.Console.live) >>> TempDirService.test)
@@ -66,7 +75,7 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
 
       val idManagerConfig =
         ZLayer.succeed(
-          IDManagerConfig(IDManagerSparkConfig(tempDir.getAbsolutePath, false), HBaseColumnConfig("", "", ""))
+          IDManagerConfig(IDManagerSparkConfig(0, tempDir.getAbsolutePath, false), HBaseColumnConfig("", "", ""))
         )
 
       val app = for {
@@ -79,7 +88,7 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
               vertexData <- idManager.process(df, "")
               vertexProcessorLive = VertexProcessorLive(grafinkJanusGraphConfig)
               dataTypeForVertexPropertyCols = vertexProcessorLive
-                .getDataTypeForVertexProperties(jobConfig.schema.vertexPropertyCols, df)
+                .getDataTypeForVertexProperties(jobConfig.schema.vertexLabels.head.propertiesFromData, df)
               _ <- vertexProcessorLive
                 .job(jobConfig, graph, dataTypeForVertexPropertyCols, vertexData.current.collect.toIterator)
               g = graph.traversal()
@@ -100,6 +109,80 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
         hasSameElementsDistinct(List("ZTF19acmcetc", "ZTF17aaanypg", "ZTF19acmbxka", "ZTF19acmbxfe", "ZTF19acmbtac"))
       )
     },
+    testM("VertexProcessor will correctly add fixedvertices into janusgraph") {
+      val dateString    = "2019-02-01"
+      val date          = LocalDate.parse(dateString, dateFormat)
+      val dataPath      = "/data"
+      val path          = getClass.getResource(dataPath).getPath
+      val logger        = Logger.test
+      val objectIdIndex = "objectIdIndex"
+
+      val janusConfig =
+        JanusGraphConfig(
+          JanusGraphStorageConfig("", 0, tableName = "test", List.empty),
+          JanusGraphIndexBackendConfig("", "", "")
+        )
+      val jobConfig = GrafinkJobConfig(
+        SchemaConfig(
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snn_snia_vs_nonia", "objectId"))),
+          edgeLabels = List(),
+          IndexConfig(
+            composite = List(CompositeIndex(name = objectIdIndex, properties = List("objectId"))),
+            mixed = List.empty,
+            edge = List.empty
+          )
+        ),
+        VertexLoaderConfig(10, "alert", "/fixedvertices.csv"),
+        EdgeLoaderConfig(
+          10,
+          1,
+          25000,
+          List.empty,
+          EdgeRulesConfig(
+            SimilarityConfig(""),
+            TwoModeSimilarityConfig(List.empty),
+            SameValueSimilarityConfig(List.empty)
+          )
+        )
+      )
+      val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
+
+      val vertexProcessorLive = VertexProcessorLive(grafinkJanusGraphConfig)
+
+      val app = for {
+        output <- JanusGraphTestEnv
+          .test(janusConfig)
+          .use(graph =>
+            for {
+              fixedVertices <- FixedVertexDataReader.readFixedVertexData(jobConfig.vertexLoader)
+              _             <- vertexProcessorLive.loadFixedVertices(graph, fixedVertices)
+              g = graph.traversal()
+            } yield g.V().toList.asScala.map(_.property("recipe").value().toString).toList
+          )
+      } yield output
+
+      val fixedVertexDataReaderLayer = logger >>> FixedVertexDataReader.live
+      val vertexProcessorLayer =
+        (sparkLayer ++ ZLayer.succeed(jobConfig) ++ ZLayer.succeed(janusConfig) ++ logger) >>> VertexProcessor.live
+      val layer = TestConsole.debug ++ vertexProcessorLayer ++ logger ++ sparkLayer ++ fixedVertexDataReaderLayer
+
+      assertM(app.provideLayer(layer))(
+        hasSameElementsDistinct(
+          List(
+            "supernova",
+            "microlensing",
+            "asteroids",
+            "catalog",
+            "intrecipe",
+            "longrecipe",
+            "floatrecipe",
+            "doublerecipe",
+            "boolrecipe",
+            "unknownrecipe"
+          )
+        )
+      )
+    },
     testM("VertexProcessor will correctly delete already added input alerts into janusgraph") {
       val dateString = "2019-02-01"
       val date       = LocalDate.parse(dateString, dateFormat)
@@ -115,13 +198,22 @@ object VertexProcessorSpec extends DefaultRunnableSpec {
 
       val jobConfig = GrafinkJobConfig(
         SchemaConfig(
-          vertexPropertyCols = List("rfscore", "objectId"),
-          vertexLabel = "type",
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snn_snia_vs_nonia"))),
           edgeLabels = List(),
           index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
         ),
-        VertexLoaderConfig(1),
-        EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(SimilarityConfig("")))
+        VertexLoaderConfig(1, "alert", ""),
+        EdgeLoaderConfig(
+          10,
+          1,
+          25000,
+          List.empty,
+          EdgeRulesConfig(
+            SimilarityConfig(""),
+            TwoModeSimilarityConfig(List.empty),
+            SameValueSimilarityConfig(List.empty)
+          )
+        )
       )
       val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
       val vertexSchema = StructType(

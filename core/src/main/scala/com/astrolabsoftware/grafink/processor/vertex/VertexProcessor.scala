@@ -14,22 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.astrolabsoftware.grafink.processor
+package com.astrolabsoftware.grafink.processor.vertex
+
+import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.{ DataFrame, Row }
 import org.apache.spark.sql.types.DataType
-import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.{ GraphTraversal, GraphTraversalSource }
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversalSource
 import org.apache.tinkerpop.gremlin.structure.T
 import org.janusgraph.core.JanusGraph
 import org.janusgraph.graphdb.database.StandardJanusGraph
-import zio.{ Has, URLayer, ZIO, ZLayer, ZManaged }
+import zio._
 import zio.logging.{ log, Logging }
 
 import com.astrolabsoftware.grafink.JanusGraphEnv.withGraph
 import com.astrolabsoftware.grafink.common.Utils
 import com.astrolabsoftware.grafink.logging.Logger
-import com.astrolabsoftware.grafink.models.{ GrafinkJanusGraphConfig, GrafinkJobConfig, JanusGraphConfig }
+import com.astrolabsoftware.grafink.models._
 import com.astrolabsoftware.grafink.models.config.Config
+import com.astrolabsoftware.grafink.processor.vertex.FixedVertexDataReader.FixedVertexDataReader
 
 object VertexProcessor {
 
@@ -38,6 +41,10 @@ object VertexProcessor {
   type VertexProcessorService = Has[VertexProcessor.Service]
 
   trait Service {
+    def loadFixedVertices(
+      graph: JanusGraph,
+      fixedVertices: List[FixedVertex]
+    ): ZIO[FixedVertexDataReader with Logging, Throwable, Unit]
     def process(df: DataFrame): ZIO[Logging, Throwable, Unit]
     def delete(df: DataFrame): ZIO[Logging, Throwable, Unit]
   }
@@ -49,6 +56,12 @@ object VertexProcessor {
       } yield VertexProcessorLive(config)
     )
 
+  def loadFixedVertices(
+    graph: JanusGraph,
+    fixedVertices: List[FixedVertex]
+  ): ZIO[VertexProcessorService with FixedVertexDataReader with Logging, Throwable, Unit] =
+    ZIO.accessM(_.get.loadFixedVertices(graph, fixedVertices))
+
   def process(df: DataFrame): ZIO[VertexProcessorService with Logging, Throwable, Unit] =
     ZIO.accessM(_.get.process(df))
 
@@ -58,6 +71,9 @@ object VertexProcessor {
 
 final case class VertexProcessorLive(config: GrafinkJanusGraphConfig) extends VertexProcessor.Service {
 
+  // WARNING: Here we have assumed schema vertexLabels will have the configured vertex label in vertex loader
+  val labelConfig = config.job.schema.vertexLabels.find(p => p.name == config.job.vertexLoader.label).get
+
   def job(
     config: GrafinkJobConfig,
     graph: JanusGraph,
@@ -65,8 +81,10 @@ final case class VertexProcessorLive(config: GrafinkJanusGraphConfig) extends Ve
     partition: Iterator[Row]
   ): ZIO[Any, Throwable, Unit] = {
 
-    val batchSize        = config.vertexLoader.batchSize
-    val vertexProperties = config.schema.vertexPropertyCols
+    val batchSize = config.vertexLoader.batchSize
+    val label     = labelConfig
+    // Not using fixed vertex properties
+    val vertexProperties = label.propertiesFromData
 
     @inline
     def getVertexProperties(r: Row): Seq[AnyRef] =
@@ -81,22 +99,15 @@ final case class VertexProcessorLive(config: GrafinkJanusGraphConfig) extends Ve
       }
 
     @inline
-    def getVertexParams(r: Row, id: java.lang.Long): Seq[AnyRef] = Seq(T.id, id) ++ getVertexProperties(r)
+    def getVertexParams(r: Row, id: java.lang.Long): Seq[AnyRef] =
+      Seq(T.id, id, T.label, label.name) ++ getVertexProperties(r)
 
     val idManager = graph.asInstanceOf[StandardJanusGraph].getIDManager
-    val kgroup    = partition.grouped(batchSize)
-    val l = kgroup.map(group =>
+    val l = partition.map(r =>
       for {
-        _ <- ZIO.collectAll_(
-          // TODO: Make id fieldName configurable
-          group.map(r =>
-            ZIO.effect(
-              graph.addVertex(
-                getVertexParams(r, java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long]("id")))): _*
-              )
-            )
-          )
-        )
+        _ <- ZIO.effect(graph.addVertex(
+          getVertexParams(r, java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long]("id")))): _ *
+        ))
         _ <- ZIO.effect(graph.tx.commit)
       } yield ()
     )
@@ -147,11 +158,51 @@ final case class VertexProcessorLive(config: GrafinkJanusGraphConfig) extends Ve
     df.schema.fields.filter(f => vertexPropertiesSet.contains(f.name)).map(f => f.name -> f.dataType).toMap
   }
 
+  override def loadFixedVertices(
+    graph: JanusGraph,
+    fixedVertices: List[FixedVertex]
+  ): ZIO[FixedVertexDataReader with Logging, Throwable, Unit] = {
+
+    val idManager = graph.asInstanceOf[StandardJanusGraph].getIDManager
+    val firstId   = java.lang.Long.valueOf(idManager.toVertexId(fixedVertices.head.id))
+    for {
+      // First check if any of these vertices already exists, if yes, skip loading
+      _ <- ZIO
+        .effect(graph.traversal())
+        .bracket(
+          g => ZIO.effect(g.close()).fold(_ => ZIO.unit, _ => ZIO.unit),
+          g =>
+            for {
+              existV <- ZIO.effect(g.V(firstId).toList.asScala)
+              _ <- if (existV.size > 0) {
+                log.warn(s"Skipping adding fixed vertices as vertex ${existV.head.id} already exists")
+              } else {
+                ZIO.collectAll_(
+                  fixedVertices.map(v =>
+                    ZIO.effect(
+                      graph.addVertex(
+                        (Seq(
+                          T.id,
+                          java.lang.Long.valueOf(idManager.toVertexId(v.id)),
+                          T.label,
+                          v.label
+                        ) ++ v.properties.flatMap(p => List(p.name, p.value)): Seq[AnyRef]): _*
+                      )
+                    )
+                  )
+                )
+              }
+              _ <- ZIO.effect(graph.tx.commit)
+            } yield ()
+        )
+    } yield ()
+  }
+
   override def process(df: DataFrame): ZIO[Logging, Throwable, Unit] = {
 
     val jobConfig                                            = config.job
     val c                                                    = config
-    val vertexProperties                                     = jobConfig.schema.vertexPropertyCols
+    val vertexProperties                                     = labelConfig.propertiesFromData
     val dataTypeForVertexPropertyCols: Map[String, DataType] = getDataTypeForVertexProperties(vertexProperties, df)
     val jobFunc                                              = job _
 

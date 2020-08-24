@@ -29,7 +29,7 @@ mappings in Universal := {
   val fatJar = (assembly in Compile).value
 
   val filtered = universalMappings filter {
-    case (_, name) => !name.endsWith(".jar")
+    case (_, name) => (!name.endsWith(".jar")) && (!name.endsWith(".csv"))
   }
 
   // add the fat jar to our sequence of things that we've filtered

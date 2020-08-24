@@ -32,8 +32,7 @@ object BuildHelper {
   val janusGraphVersion = "0.5.1"
   val ammoniteVersion = "2.1.4"
   val asciiRenderVersion = "1.3.1"
-  val scalaJSVersion = "1.0.0"
-  val scalaJSReactVersion = "1.7.2"
+  val scalaCsvVersion = "1.3.6"
   val scalaTagsVersion = "0.9.1"
   val http4sVersion = "1.0.0-M3"
   val circeVersion = "0.13.0"
@@ -134,6 +133,7 @@ object BuildHelper {
         "org.apache.spark" %% "spark-sql" % sparkVersion,
         "com.github.mrpowers" % "spark-daria" % sparkDariaVersion,
         "io.leego" % "banana" % asciiRenderVersion,
+        "com.github.tototoshi" %% "scala-csv" % scalaCsvVersion,
         ammonite(scalaVersion.value)
       )
   ) ++ commonSettings ++ hBaseSettings

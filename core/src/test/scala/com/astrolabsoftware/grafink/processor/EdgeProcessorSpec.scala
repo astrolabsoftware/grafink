@@ -17,6 +17,7 @@ import com.astrolabsoftware.grafink.common.PartitionManager.dateFormat
 import com.astrolabsoftware.grafink.logging.Logger
 import com.astrolabsoftware.grafink.models._
 import com.astrolabsoftware.grafink.processor.EdgeProcessor.EdgeColumns._
+import com.astrolabsoftware.grafink.processor.vertex.{ VertexProcessor, VertexProcessorLive }
 import com.astrolabsoftware.grafink.services.IDManagerSparkService
 import com.astrolabsoftware.grafink.services.IDManagerSparkService.IDManagerSparkService
 import com.astrolabsoftware.grafink.services.reader.Reader
@@ -31,7 +32,7 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
       val edgeLabel         = "similarity"
       val taskSize          = 2500
       val parallelismConfig = 10
-      val similarityConfig  = SimilarityConfig("(rfscore AND snnscore) OR objectId")
+      val similarityConfig  = SimilarityConfig("(rfscore AND snn_snia_vs_nonia) OR objectId")
       val janusConfig =
         JanusGraphConfig(
           JanusGraphStorageConfig("", 0, tableName = "test", List.empty),
@@ -39,13 +40,18 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
         )
       val jobConfig = GrafinkJobConfig(
         SchemaConfig(
-          vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
-          vertexLabel = "type",
-          edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long"))),
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snn_snia_vs_nonia", "objectId"))),
+          edgeLabels = List(EdgeLabelConfig(name = edgeLabel, List(PropertySchema(name = "value", typ = "long")))),
           index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
         ),
-        VertexLoaderConfig(10),
-        EdgeLoaderConfig(10, parallelismConfig, taskSize, EdgeRulesConfig(similarityConfig))
+        VertexLoaderConfig(10, "alert", ""),
+        EdgeLoaderConfig(
+          10,
+          parallelismConfig,
+          taskSize,
+          List.empty,
+          EdgeRulesConfig(similarityConfig, TwoModeSimilarityConfig(List.empty), SameValueSimilarityConfig(List.empty))
+        )
       )
       val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
       val parallelism1            = EdgeProcessorLive(grafinkJanusGraphConfig).getParallelism(3000).partitions
@@ -60,11 +66,11 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
       val logger           = Logger.test
       val edgeLabel        = "similarity"
       val edgePropertyKey  = "value"
-      val similarityConfig = SimilarityConfig("(rfscore AND snnscore) OR objectId")
+      val similarityConfig = SimilarityConfig("(rfscore AND snn_snia_vs_nonia) OR objectId")
 
       val readerConfig =
         ZLayer.succeed(
-          ReaderConfig(path, Parquet, keepCols = List("rfscore", "snnscore", "objectId"), keepColsRenamed = List())
+          ReaderConfig(path, Parquet, keepCols = List("rfscore", "snn_snia_vs_nonia", "objectId"), keepColsRenamed = List())
         )
       val janusConfig =
         JanusGraphConfig(
@@ -73,17 +79,22 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
         )
       val jobConfig = GrafinkJobConfig(
         SchemaConfig(
-          vertexPropertyCols = List("rfscore", "snnscore", "objectId"),
-          vertexLabel = "type",
-          edgeLabels = List(EdgeLabelConfig(name = edgeLabel, Map("value" -> "long"))),
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snn_snia_vs_nonia", "objectId"))),
+          edgeLabels = List(EdgeLabelConfig(name = edgeLabel, List(PropertySchema(name = "value", typ = "long")))),
           index = IndexConfig(
             composite = List.empty,
             mixed = List.empty,
             edge = List(EdgeIndex(name = "similarityIndex", properties = List("value"), label = edgeLabel))
           )
         ),
-        VertexLoaderConfig(10),
-        EdgeLoaderConfig(10, 1, 25000, EdgeRulesConfig(similarityConfig))
+        VertexLoaderConfig(10, "alert", ""),
+        EdgeLoaderConfig(
+          10,
+          1,
+          25000,
+          List.empty,
+          EdgeRulesConfig(similarityConfig, TwoModeSimilarityConfig(List.empty), SameValueSimilarityConfig(List.empty))
+        )
       )
       val grafinkJanusGraphConfig = GrafinkJanusGraphConfig(jobConfig, janusConfig)
       val tempDirServiceLayer     = ((zio.console.Console.live) >>> TempDirService.test)
@@ -93,7 +104,7 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
 
       val idManagerConfig =
         ZLayer.succeed(
-          IDManagerConfig(IDManagerSparkConfig(tempDir.getAbsolutePath, false), HBaseColumnConfig("", "", ""))
+          IDManagerConfig(IDManagerSparkConfig(0, tempDir.getAbsolutePath, false), HBaseColumnConfig("", "", ""))
         )
 
       val edgeSchema = StructType(
@@ -115,7 +126,7 @@ object EdgeProcessorSpec extends DefaultRunnableSpec {
               vertexProcessorLive = VertexProcessorLive(grafinkJanusGraphConfig)
               edgeProcessorLive   = EdgeProcessorLive(grafinkJanusGraphConfig)
               dataTypeForVertexPropertyCols = vertexProcessorLive
-                .getDataTypeForVertexProperties(jobConfig.schema.vertexPropertyCols, df)
+                .getDataTypeForVertexProperties(jobConfig.schema.vertexLabels.head.propertiesFromData, df)
               vertexDataCurrent <- ZIO.effect(vertexData.current.collect.toIterator)
               _                 <- vertexProcessorLive.job(jobConfig, graph, dataTypeForVertexPropertyCols, vertexDataCurrent)
               edges = List(

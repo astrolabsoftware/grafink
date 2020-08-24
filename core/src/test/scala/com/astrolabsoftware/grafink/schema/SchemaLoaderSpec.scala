@@ -3,7 +3,7 @@ package com.astrolabsoftware.grafink.schema
 import scala.collection.JavaConverters._
 
 import org.apache.spark.sql.types.{ DoubleType, FloatType, IntegerType, StringType, StructField, StructType }
-import org.janusgraph.core.schema.{ JanusGraphIndex, SchemaStatus }
+import org.janusgraph.core.schema.SchemaStatus
 import zio.{ ZIO, ZLayer }
 import zio.test.{ DefaultRunnableSpec, _ }
 import zio.test.Assertion._
@@ -34,20 +34,29 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
 
       val jobConfig = GrafinkJobConfig(
         SchemaConfig(
-          vertexPropertyCols = List("rfscore", "snn"),
-          vertexLabel = "type",
-          edgeLabels = List(EdgeLabelConfig("similarity", Map("key" -> "value", "typ" -> "long"))),
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snn"))),
+          edgeLabels = List(EdgeLabelConfig("similarity", List(PropertySchema(name = "value", typ = "long")))),
           index = IndexConfig(composite = List.empty, mixed = List.empty, edge = List.empty)
         ),
-        VertexLoaderConfig(10),
-        EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore")))
+        VertexLoaderConfig(10, "alert", ""),
+        EdgeLoaderConfig(
+          100,
+          10,
+          25000,
+          List.empty,
+          EdgeRulesConfig(
+            SimilarityConfig("rfscore"),
+            TwoModeSimilarityConfig(List.empty),
+            SameValueSimilarityConfig(List.empty)
+          )
+        )
       )
       val app =
         for {
           output <- JanusGraphTestEnv.test(janusConfig).use { graph =>
             for {
               _ <- SchemaLoader.loadSchema(graph, dataSchema)
-            } yield graph.getVertexLabel("type").mappedProperties().asScala.toList.map(_.name) ++
+            } yield graph.getVertexLabel("alert").mappedProperties().asScala.toList.map(_.name) ++
               graph.getEdgeLabel("similarity").mappedProperties().asScala.toList.map(_.name)
           }
         } yield output
@@ -79,17 +88,26 @@ object SchemaLoaderSpec extends DefaultRunnableSpec {
         )
       val jobConfig = GrafinkJobConfig(
         SchemaConfig(
-          vertexPropertyCols = List("rfscore", "snn", "objectId"),
-          vertexLabel = "type",
-          edgeLabels = List(EdgeLabelConfig(edgeLabel, Map("key" -> "value", "typ" -> "long"))),
+          vertexLabels = List(VertexLabelConfig("alert", List.empty, List("rfscore", "snn", "objectId"))),
+          edgeLabels = List(EdgeLabelConfig(edgeLabel, List(PropertySchema(name = "value", typ = "long")))),
           index = IndexConfig(
             composite = List(CompositeIndex(name = objectIdIndex, properties = List("objectId"))),
             mixed = List.empty,
             edge = List(EdgeIndex(name = similarityIndex, properties = List("value"), label = edgeLabel))
           )
         ),
-        VertexLoaderConfig(10),
-        EdgeLoaderConfig(100, 10, 25000, EdgeRulesConfig(SimilarityConfig("rfscore")))
+        VertexLoaderConfig(10, label = "alert", ""),
+        EdgeLoaderConfig(
+          100,
+          10,
+          25000,
+          List.empty,
+          EdgeRulesConfig(
+            SimilarityConfig("rfscore"),
+            TwoModeSimilarityConfig(List.empty),
+            SameValueSimilarityConfig(List.empty)
+          )
+        )
       )
       case class IndexResult(name: String, status: SchemaStatus)
 

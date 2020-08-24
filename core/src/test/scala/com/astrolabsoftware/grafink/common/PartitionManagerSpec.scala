@@ -85,7 +85,7 @@ object PartitionManagerSpec extends DefaultRunnableSpec {
           )
 
         val idManagerConfig =
-          IDManagerConfig(IDManagerSparkConfig(tempDir.getAbsolutePath, false), HBaseColumnConfig("", "", ""))
+          IDManagerConfig(IDManagerSparkConfig(0, tempDir.getAbsolutePath, false), HBaseColumnConfig("", "", ""))
 
         val idManagerConfigLayer = ZLayer.succeed(idManagerConfig)
 

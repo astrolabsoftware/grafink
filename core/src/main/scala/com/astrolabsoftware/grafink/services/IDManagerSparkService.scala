@@ -135,7 +135,7 @@ final class IDManagerSparkServiceLive(spark: SparkSession, config: IDManagerConf
     // TODO: Modify this to read data from only the latest day's data present in the path
     for {
       res <- ZIO.effect(df.select(max(col("id"))).collect)
-      currentID = res.headOption.map(r => if (r.isNullAt(0)) 0L else r.getLong(0))
+      currentID = res.headOption.map(r => if (r.isNullAt(0)) config.spark.reservedIdSpace else r.getLong(0))
       _ <- if (currentID.isDefined) log.info(s"Returning current max id = ${currentID.get}")
       else ZIO.fail(GetIdException(s"Did not get valid max id"))
     } yield currentID.get

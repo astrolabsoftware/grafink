@@ -1,0 +1,74 @@
+@startuml
+skinparam sequenceMessageAlign center
+title SameValueClassifer: ["objectId"]
+usecase V1 as "
+
+
+= v1
+rfscore = 0.917
+snn_snia_vs_nonia = 0.998
+objectId = ZTF17aaadara
+roid = 2
+
+
+"
+usecase V2 as "
+
+
+= v2
+rfscore = 0.954
+snn_snia_vs_nonia = 0.978
+=== objectId = ZTF18aaacpwn
+roid = 2
+
+
+"
+usecase V3 as "
+
+
+= v3
+rfscore = 0.961
+snn_snia_vs_nonia = 0.3
+=== objectId = ZTF18aaacpwn
+roid = 0
+
+
+"
+usecase V4 as "
+
+
+= v4
+rfscore = 0.789
+snn_snia_vs_nonia = 0.245
+objectId = ZTF18abpubcn
+roid = 3
+
+
+"
+usecase V5 as "
+
+
+= v5
+rfscore = 0.815
+snn_snia_vs_nonia = 0.9
+objectId = ZTF18aaaccvv
+roid = 0
+
+
+"
+usecase V6 as "
+
+
+= v6
+rfscore = 0.815
+snn_snia_vs_nonia = 0.9
+=== objectId = ZTF18aaacpwn
+roid = 0
+
+
+"
+
+V2 <--> V3: exactmatch objectId
+V2 <--> V6: exactmatch objectId
+V3 <--> V6: exactmatch objectId
+@enduml

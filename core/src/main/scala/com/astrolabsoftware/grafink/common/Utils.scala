@@ -52,6 +52,19 @@ object Utils {
     case _        => classOf[String]
   }
 
+  def stringToValueType(v: String, t: String): AnyRef =
+    t match {
+      case "binary" => v.getBytes
+      case "byte"   => java.lang.Byte.valueOf(v)
+      case "int"    => java.lang.Integer.valueOf(v)
+      case "long"   => java.lang.Long.valueOf(v)
+      case "float"  => java.lang.Float.valueOf(v)
+      case "double" => java.lang.Double.valueOf(v)
+      case "string" => v
+      case "bool"   => java.lang.Boolean.valueOf(v)
+      case _        => v
+    }
+
   def withFileSystem[R, A](f: FileSystem => ZIO[R, Throwable, A])(implicit spark: SparkSession): ZIO[R, Throwable, A] =
     ZIO
       .effect(FileSystem.get(spark.sparkContext.hadoopConfiguration))
