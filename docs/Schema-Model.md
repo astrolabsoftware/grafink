@@ -146,8 +146,8 @@ Note that this schema is subject to evolution. The above row will be translated 
     - `xmatch`: returns the SIMBAD closest counterpart of an alert, based on position.
     - `random_forest_snia`: returns the probability of an alert to be a SNe Ia using a Random Forest Classifier (binary classification)
     - `snn`: returns the probability of an alert to be a SNe Ia using [SuperNNova](https://github.com/supernnova/SuperNNova). Two pre-trained models:
-    - `snn_snia_vs_nonia`: Ia vs core-collapse SNe
-    - `snn_sn_vs_all`: SNe vs. anything else (variable stars and other categories in the training)
+      - `snn_snia_vs_nonia`: Ia vs core-collapse SNe
+      - `snn_sn_vs_all`: SNe vs. anything else (variable stars and other categories in the training)
     - `microlensing`: returns the predicted class (among microlensing, variable star, cataclysmic event, and constant event) & probability of an alert to be a microlensing event in each band using [LIA](https://github.com/dgodinez77/LIA).
     - `asteroids`: Determine if the alert is an asteroid (experimental).
     - `nalerthist`: Number of detections contained in each alert (current+history). Upper limits are not taken into account.
