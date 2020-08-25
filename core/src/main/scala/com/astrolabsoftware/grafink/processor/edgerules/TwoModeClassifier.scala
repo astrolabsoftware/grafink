@@ -26,8 +26,10 @@ case class TwoModeEdge(src: Long, dst: Long, propVal: Double)
 class TwoModeClassifier(config: TwoModeSimilarityConfig, similarityRecipes: List[FixedVertex])
     extends VertexClassifierRule {
 
-  val scoreCond: Row => Boolean = r => (r.getAs[Double]("rfscore") > 0.9) && (r.getAs[Double]("snn_snia_vs_nonia") > 0.9)
-  val roidCond: Row => Boolean  = r => r.getAs[Int]("roid") > 1
+  // Old supernova recipe
+  val scoreCond: Row => Boolean = r =>
+    (r.getAs[Double]("rfscore") > 0.9) && (r.getAs[Double]("snn_snia_vs_nonia") > 0.9)
+  val roidCond: Row => Boolean = r => r.getAs[Int]("roid") > 1
   val mulensmlCond: Row => Boolean = r =>
     (r.getAs[String]("mulens_class_1") == "ML") && (r.getAs[String]("mulens_class_2") == "ML")
 
@@ -41,9 +43,42 @@ class TwoModeClassifier(config: TwoModeSimilarityConfig, similarityRecipes: List
 
     val rules = config.recipes
 
+    val supernovaRecipeCdsxmatchSet =
+      Set(
+        "galaxy",
+        "Galaxy",
+        "EmG",
+        "Seyfert",
+        "Seyfert_1",
+        "Seyfert_2",
+        "BlueCompG",
+        "StarburstG",
+        "LSB_G",
+        "HII_G",
+        "High_z_G",
+        "GinPair",
+        "GinGroup",
+        "BClG",
+        "GinCl",
+        "PartofG",
+        "Unknown",
+        "Candidate_SN*",
+        "SN",
+        "Transient"
+      )
+
+    // New supernova recipe
+    val supernovaCond: Row => Boolean = r =>
+      (r.getAs[Double]("snn_snia_vs_nonia") > 0.75) &&
+        (r.getAs[Float]("snn_sn_vs_all") > 0.75f) &&
+        (r.getAs[Float]("drb") > 0.5) &&
+        (r.getAs[Int]("ndethist") < 400) &&
+        (r.getAs[Double]("classtar") > 0.4) &&
+        (supernovaRecipeCdsxmatchSet.contains(r.getAs[String]("cdsxmatch")))
+
     val ruleToCondition =
       Map(
-        "supernova"    -> scoreCond,
+        "supernova"    -> supernovaCond,
         "microlensing" -> mulensmlCond,
         "asteroids"    -> roidCond
       )

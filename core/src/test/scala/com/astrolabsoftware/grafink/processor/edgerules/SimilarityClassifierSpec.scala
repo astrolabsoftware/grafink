@@ -16,6 +16,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
     case e           => Some(e.name)
   }
 
+  // scalastyle:off
   def genAlert(
     _id: Long,
     _objectId: String,
@@ -25,7 +26,10 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
     _classtar: Double,
     _cdsxmatch: Cdsxmatch,
     _mulens_class_1: Mulens,
-    _mulens_class_2: Mulens
+    _mulens_class_2: Mulens,
+    _snn_sn_vs_all: Float = 0.80f,
+    _drb: Float = 0.79f,
+    _ndethist: Int = 392
   ): Alert =
     Alert(
       id = _id,
@@ -34,6 +38,9 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
       cdsxmatch = _cdsxmatch.name,
       rfscore = _rfscore,
       snn_snia_vs_nonia = _snn_snia_vs_nonia,
+      snn_sn_vs_all = _snn_sn_vs_all,
+      drb = _drb,
+      ndethist = _ndethist,
       roid = _roid,
       classtar = _classtar,
       mulens_class_1 = mulensToString(_mulens_class_1),
@@ -42,6 +49,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
       month = 2,
       day = 1
     )
+  // scalastyle:on
 
   def spec: ZSpec[Environment, Failure] =
     suite("SimilarityClassifierSpec")(

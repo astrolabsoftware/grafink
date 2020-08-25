@@ -105,9 +105,11 @@ final case class VertexProcessorLive(config: GrafinkJanusGraphConfig) extends Ve
     val idManager = graph.asInstanceOf[StandardJanusGraph].getIDManager
     val l = partition.map(r =>
       for {
-        _ <- ZIO.effect(graph.addVertex(
-          getVertexParams(r, java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long]("id")))): _ *
-        ))
+        _ <- ZIO.effect(
+          graph.addVertex(
+            getVertexParams(r, java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long]("id")))): _*
+          )
+        )
         _ <- ZIO.effect(graph.tx.commit)
       } yield ()
     )
