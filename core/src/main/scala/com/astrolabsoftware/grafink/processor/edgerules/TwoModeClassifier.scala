@@ -70,10 +70,10 @@ class TwoModeClassifier(config: TwoModeSimilarityConfig, similarityRecipes: List
     // New supernova recipe
     val supernovaCond: Row => Boolean = r =>
       (r.getAs[Double]("snn_snia_vs_nonia") > 0.75) &&
-        (r.getAs[Float]("snn_sn_vs_all") > 0.75f) &&
+        (r.getAs[Double]("snn_sn_vs_all") > 0.75) &&
         (r.getAs[Float]("drb") > 0.5) &&
         (r.getAs[Int]("ndethist") < 400) &&
-        (r.getAs[Double]("classtar") > 0.4) &&
+        (r.getAs[Float]("classtar") > 0.4f) &&
         (supernovaRecipeCdsxmatchSet.contains(r.getAs[String]("cdsxmatch")))
 
     val ruleToCondition =
