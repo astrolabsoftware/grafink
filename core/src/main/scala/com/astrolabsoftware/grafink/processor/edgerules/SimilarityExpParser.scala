@@ -119,10 +119,10 @@ object SimilarityExpParser {
    * Map from column base name to similarity condition
    */
   val fieldToSimilarityCondtitionMap: Map[String, (Column, Column) => Column] = Map(
-    "snn_snia_vs_nonia"  -> scoreCond,
-    "rfscore"   -> scoreCond,
-    "cdsxmatch" -> cdsxmatchCond,
-    "roid"      -> roidCond,
-    "classtar"  -> classtarCond
+    "snn_snia_vs_nonia" -> scoreCond,
+    "rfscore"           -> scoreCond,
+    "cdsxmatch"         -> cdsxmatchCond,
+    "roid"              -> roidCond,
+    "classtar"          -> classtarCond
   )
 }

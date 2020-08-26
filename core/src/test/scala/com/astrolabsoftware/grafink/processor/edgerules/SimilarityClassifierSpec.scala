@@ -16,16 +16,20 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
     case e           => Some(e.name)
   }
 
+  // scalastyle:off
   def genAlert(
     _id: Long,
     _objectId: String,
     _rfscore: Double,
     _snn_snia_vs_nonia: Double,
     _roid: Int,
-    _classtar: Double,
+    _classtar: Float,
     _cdsxmatch: Cdsxmatch,
     _mulens_class_1: Mulens,
-    _mulens_class_2: Mulens
+    _mulens_class_2: Mulens,
+    _snn_sn_vs_all: Double = 0.80,
+    _drb: Float = 0.79f,
+    _ndethist: Int = 392
   ): Alert =
     Alert(
       id = _id,
@@ -34,6 +38,9 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
       cdsxmatch = _cdsxmatch.name,
       rfscore = _rfscore,
       snn_snia_vs_nonia = _snn_snia_vs_nonia,
+      snn_sn_vs_all = _snn_sn_vs_all,
+      drb = _drb,
+      ndethist = _ndethist,
       roid = _roid,
       classtar = _classtar,
       mulens_class_1 = mulensToString(_mulens_class_1),
@@ -42,6 +49,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
       month = 2,
       day = 1
     )
+  // scalastyle:on
 
   def spec: ZSpec[Environment, Failure] =
     suite("SimilarityClassifierSpec")(
@@ -59,7 +67,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _objectId = "ZTF19acmbyav",
               _rfscore = 0.388,
               _snn_snia_vs_nonia = 0.36001157760620117,
-              _classtar = 0.0,
+              _classtar = 0.0f,
               _roid = 1,
               _cdsxmatch = WDStar,
               _mulens_class_1 = MULENS_NULL,
@@ -74,7 +82,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _objectId = "ZTF19acmbyav",
               _rfscore = 0.988,
               _snn_snia_vs_nonia = 0.67001157760620889,
-              _classtar = 0.0,
+              _classtar = 0.0f,
               _roid = 0,
               _cdsxmatch = Cdsxmatch_UNKNOWN,
               _mulens_class_1 = MULENS_NULL,
@@ -108,7 +116,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _objectId = "ZTF19acmbyav",
               _rfscore = 0.388,
               _snn_snia_vs_nonia = 0.36001157760620117,
-              _classtar = 0.0,
+              _classtar = 0.0f,
               _roid = 1,
               _cdsxmatch = WDStar,
               _mulens_class_1 = MULENS_NULL,
@@ -119,7 +127,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _objectId = "ZTF19acmbyav",
               _rfscore = 0.988,
               _snn_snia_vs_nonia = 0.67001157760620889,
-              _classtar = 0.0,
+              _classtar = 0.0f,
               _roid = 0,
               _cdsxmatch = Cdsxmatch_UNKNOWN,
               _mulens_class_1 = MULENS_NULL,
@@ -134,7 +142,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _objectId = "ZTF20acmkyap",
               _rfscore = 0.188,
               _snn_snia_vs_nonia = 0.67001157760620889,
-              _classtar = 0.2,
+              _classtar = 0.2f,
               _roid = 0,
               _cdsxmatch = Cdsxmatch_UNKNOWN,
               _mulens_class_1 = MULENS_NULL,
@@ -170,7 +178,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _objectId = "toto",
               _rfscore = 0.99,
               _snn_snia_vs_nonia = 0.8,
-              _classtar = 0.0,
+              _classtar = 0.0f,
               _roid = 3,
               _cdsxmatch = CStar,
               _mulens_class_1 = CONSTANT,
@@ -185,7 +193,7 @@ object SimilarityClassifierSpec extends DefaultRunnableSpec {
               _objectId = "toto",
               _rfscore = 0.95,
               _snn_snia_vs_nonia = 0.95,
-              _classtar = 0.0,
+              _classtar = 0.0f,
               _roid = 2,
               _cdsxmatch = CStar,
               _mulens_class_1 = ML,

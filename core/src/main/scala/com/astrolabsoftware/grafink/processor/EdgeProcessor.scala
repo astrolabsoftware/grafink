@@ -106,7 +106,6 @@ final case class EdgeProcessorLive(config: GrafinkJanusGraphConfig) extends Edge
   ): ZIO[Any, Throwable, Unit] = {
     val idManager = graph.asInstanceOf[StandardJanusGraph].getIDManager
     val l = partition.map { r =>
-
       val propertyVal = r.getAs[AnyVal](EdgeColumns.PROPERTYVALFIELD)
 
       for {
