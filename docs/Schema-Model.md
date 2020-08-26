@@ -132,8 +132,6 @@ COLUMN                            CELL
  i:ypos                           timestamp=1598256131226, value=float
  i:zpclrcov                       timestamp=1598256131226, value=float
  i:zpmed                          timestamp=1598256131226, value=float
-1 row(s)
-Took 0.0752 seconds
 ```
 
 Note that this schema is subject to evolution. The above row will be translated into graph data model as follows:
@@ -152,9 +150,6 @@ Note that this schema is subject to evolution. The above row will be translated 
     - `asteroids`: Determine if the alert is an asteroid (experimental).
     - `nalerthist`: Number of detections contained in each alert (current+history). Upper limits are not taken into account.
 
-
-**TODO: describe TwoModeClassifier and SameValueClassifier logic.**
-
 Each alert has two ids: ```objectId``` and ```candid```.
 ```candid``` is unique per alert.
 ```objectId``` is shared among alerts that point to the same astrophysical objects.
@@ -163,10 +158,8 @@ the alerts emitted would have the same ```objectId```,
 but different times (```jd``` ) and different ```candid```.
 
 ### Edges
-- Create an edge between all the vertices that have same ```link``` properties.
-- Definition of 'same' property will vary, and will be controlled by some rules, for eg:
-   - String properties would be considered same if they are equal
-   - ML properties might be considered same if they are below a threshold or within the same range etc.
+
+VertexClassifiers are rules, each of which creates a set of edges in the graph. See the [VertexClassifiers](classifiers/VertexClassifiers.md) documentation for more information.
 
 ### Data Insertion Algorithm (might change based on answers to the questions)
 
