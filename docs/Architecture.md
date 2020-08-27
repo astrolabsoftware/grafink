@@ -2,7 +2,7 @@
 
 This document describes the architecture for grafink
 
-![Architecture](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/saucam/grafink/master/docs/architecture.puml)
+![Architecture](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/astrolabsoftware/grafink/master/docs/architecture.puml)
 
 We follow the [algorithm described here](LoadAlgorithm.md#option4)
 

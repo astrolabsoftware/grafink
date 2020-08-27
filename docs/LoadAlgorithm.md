@@ -48,6 +48,7 @@ This will involve creating
 Every alert (single row in hbase) will be modelled as a graph vertex.
 
 <div id="option1" />
+
 #### Option 1
 
 This approach focusses on using bulk loading offered by JanusGraph to push the data.

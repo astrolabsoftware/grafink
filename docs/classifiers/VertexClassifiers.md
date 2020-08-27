@@ -11,6 +11,8 @@ Currently supported rules to generate edges are:
 | TwoModeClassifier | This rule generates an edge from each vertex to a fixed `similarity` vertex based on a `recipe` attributed to this fixed vertex |
 
 These Classifiers are described in more details in the following sections
+
+<div id="similarityclassifier" />
  
 ## SimilarityClassifer
 
@@ -41,11 +43,13 @@ for the desired columns of your dataset and then changing the ```similarityExp``
 
 For example here is the resultant edges in a graph with similarity expression as mentioned:
 
-![SimilarityClassifier](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/saucam/grafink/master/docs/classifiers/similarityclassifier.puml)
+![SimilarityClassifier](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/astrolabsoftware/grafink/master/docs/classifiers/similarityclassifier.puml)
 
 Here, vertex V1 and V2 are connected by an edge labelled ```similarity``` with ```value``` equal to 3 since they satisfy 3 of the conditions
 described by the similarity expression, namely, rfscore condition, snn_snia_vs_nonia condition and objectId condition.
 Note that even though rfscore and snn_snia_vs_nonia conditions are ANDed together in the similarity expression, each condition contributes +1 individually to the similarity value.
+
+<div id="twomodeclassifier" />
 
 ## TwoModeClassifier
 
@@ -90,7 +94,11 @@ Here are the currently supported recipes and their condition description
 
 For example here is the resultant edges in a graph to which TwoModeClassifier rule has been applied:
 
-![TwoModeClassifier](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/saucam/grafink/master/docs/classifiers/twomodeclassifier.puml)
+![TwoModeClassifier](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/astrolabsoftware/grafink/master/docs/classifiers/twomodeclassifier.puml)
+
+Here, the 4 fixed vertices are shown in gold along with the normal alert vertices in yellow.
+
+<div id="samevalueclassifier" />
 
 ## SameValueClassifier
 
@@ -104,7 +112,7 @@ Note that computing these edges requires an inner join between data to be loaded
 
 For example here is the resultant edges in a graph to which SameValueClassfier rule has been applied:
 
-![SameValueClassifier](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/saucam/grafink/master/docs/classifiers/samevalueclassifier.puml)
+![SameValueClassifier](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/astrolabsoftware/grafink/master/docs/classifiers/samevalueclassifier.puml)
 
 Observe that each vertex will be connected to all the other vertices having the exact same vertex property value for which this rule is applied.
 So in this case V2 is connected to both V3 and V6 and V3 is also connected to both V2 and V6 and so on.
