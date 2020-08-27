@@ -92,6 +92,8 @@ For example here is the resultant edges in a graph to which TwoModeClassifier ru
 
 ![TwoModeClassifier](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/saucam/grafink/master/docs/classifiers/twomodeclassifier.puml)
 
+Here, the 3 fixed vertices are shown in gold along with the normal alert vertices in yellow.
+
 ## SameValueClassifier
 
 This classifier will link vertices having exact same vertex property values for a given vertex property for eg: ```objectId```.
