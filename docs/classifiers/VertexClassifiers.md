@@ -11,6 +11,8 @@ Currently supported rules to generate edges are:
 | TwoModeClassifier | This rule generates an edge from each vertex to a fixed `similarity` vertex based on a `recipe` attributed to this fixed vertex |
 
 These Classifiers are described in more details in the following sections
+
+<div id="similarityclassifier" />
  
 ## SimilarityClassifer
 
@@ -46,6 +48,8 @@ For example here is the resultant edges in a graph with similarity expression as
 Here, vertex V1 and V2 are connected by an edge labelled ```similarity``` with ```value``` equal to 3 since they satisfy 3 of the conditions
 described by the similarity expression, namely, rfscore condition, snn_snia_vs_nonia condition and objectId condition.
 Note that even though rfscore and snn_snia_vs_nonia conditions are ANDed together in the similarity expression, each condition contributes +1 individually to the similarity value.
+
+<div id="twomodeclassifier" />
 
 ## TwoModeClassifier
 
@@ -93,6 +97,8 @@ For example here is the resultant edges in a graph to which TwoModeClassifier ru
 ![TwoModeClassifier](http://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/astrolabsoftware/grafink/master/docs/classifiers/twomodeclassifier.puml)
 
 Here, the 4 fixed vertices are shown in gold along with the normal alert vertices in yellow.
+
+<div id="samevalueclassifier" />
 
 ## SameValueClassifier
 
