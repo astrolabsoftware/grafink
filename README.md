@@ -185,7 +185,7 @@ job {
     // Currently not being used, intended to batch the janusgraph edge loading transactions
     batchSize = 100
     // Default parallelism for loading edges when the total edges to be loaded per classifier is less than taskSize
-    parallelism = 10
+    parallelism = 50
     taskSize = 25000
     // This config defines the rules to be applied for creating edges in the graph.
     // Note that each rule specified here will add a SET of edges to the graph, as described
@@ -489,6 +489,9 @@ similarityIndex                | similarity  | BOTH      | value          | asc 
 """
 
 ```
+
+## Grafink API
+Find detailed information about the API module and supported APIs [here](docs/API.md)
 
 ## Benchmarks
 
