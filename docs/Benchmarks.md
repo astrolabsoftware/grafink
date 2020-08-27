@@ -2,7 +2,7 @@
 
 Some benchmarks for the grafink job runs
 
-### 1
+### 1 Using SimilarityClassifier (unless specified otherwise)
 
 Environment details
 
@@ -64,7 +64,7 @@ Environment details
 
 HBase
 Similarity value Dataype Int
-But we use DataFrame instead of Dataset[EdgeClass]
+But we use DataFrame instead of Dataset[EdgeClass] (now onwards)
 Spark cluster running over mesos
 
 | # of executors | Executor memory | Executor cores | Driver memory |
@@ -78,4 +78,24 @@ JobId in history server: 594f9a37-08ab-4400-a8fa-e9990dc90d3b-0302
 | # of vertices | # of edges | vertexLoader batchsize | edgeLoader batchsize |  Vertex load time  | Edge load time | Total Job time | # of tasks failed |
 |---------------|------------|------------------------|----------------------|--------------------|----------------|----------------|-------------------|
 |107619|128480018|100|500|10 s|47 min|56 min|0|
+
+### 5 Using TwoModeClassifier and SameValueClassifier
+
+Environment details
+
+HBase
+Spark cluster running over mesos
+We now commit the transaction after adding every edge/vertex in JanusGraph
+
+| # of executors | Executor memory | Executor cores | Driver memory |
+|----------------|-----------------|----------------|---------------|
+|50|2g|2|2g
+
+Run details
+
+JobId in history server: d0b4e985-6627-438f-960d-d44284c2b70f-0372
+
+| # of vertices | # of edges |  Vertex load time  | Edge load time | Total Job time | # of tasks failed |
+|---------------|------------|------------------------|----------------------|--------------------|----------------|----------------|-------------------|
+|477314|980989|59s s|1.4 min|6 min|0|
 
