@@ -93,9 +93,9 @@ We now commit the transaction after adding every edge/vertex in JanusGraph
 
 Run details
 
-JobId in history server: d0b4e985-6627-438f-960d-d44284c2b70f-0372
+JobId in history server: d0b4e985-6627-438f-960d-d44284c2b70f-0389
 
 | # of vertices | # of edges |  Vertex load time  | Edge load time | Total Job time | # of tasks failed |
 |---------------|------------|--------------------|----------------|----------------|-------------------|
-|477314|980989|59s s|1.4 min|6 min|0|
+|477314|981364|1 min|2.3 min|7.8 min|0|
 

@@ -118,6 +118,7 @@ final case class EdgeProcessorLive(config: GrafinkJanusGraphConfig) extends Edge
           g.V(java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long](EdgeColumns.DSTVERTEXFIELD))))
         )
         _ <- ZIO.effect(srcVertex.addE(label).to(dstVertex).property(propertyKey, propertyVal).iterate)
+        _ <- ZIO.effect(g.tx.commit)
         // Add reverse edge as well
         rSrcVertex <- ZIO.effect(
           g.V(java.lang.Long.valueOf(idManager.toVertexId(r.getAs[Long](EdgeColumns.SRCVERTEXFIELD))))
