@@ -99,3 +99,31 @@ JobId in history server: d0b4e985-6627-438f-960d-d44284c2b70f-0389
 |---------------|------------|--------------------|----------------|----------------|-------------------|
 |477314|981364|1 min|2.3 min|7.8 min|0|
 
+### 6 Simulation of ingestion pipeline
+
+Environment details
+
+HBase
+Spark cluster running over mesos
+We continue to commit the transaction after adding every edge/vertex in JanusGraph
+
+| # of executors | Executor memory | Executor cores | Driver memory |
+|----------------|-----------------|----------------|---------------|
+|50|2g|2|2g
+
+We run a series of jobs, each ingesting vertices on top of existing data, and end up
+ingesting 10098333 + 35 vertices in total
+* Note that we have modified the benchmark version to run for longer duration of the data (normal limit is 7 days)
+
+| Start Date | Job duration (days)  | # of vertices | # of edges |  Vertex load time  | Edge load time | Total Job time | # of tasks failed | Job Link |
+|------------|----------------------|---------------|------------|--------------------|----------------|----------------|-------------------|----------|
+| 2020-08-04 | 1 |82378| - |18 s|18s + 12 min|16 min|145|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0423/jobs/|
+| 2020-07-21 | 11 - 1(day 28th missing) |746811| - |1.5 min|2.7 min + 38 min|49 min|3|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0422/jobs/|
+| 2020-07-01 | 20 |1293556|-|2.7 min|2.9 min + 0 s|29 min (time spent in count)|5 + 32|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0421/jobs/|
+| 2020-06-21 | 10 |594367|-|1.3 min|1.6 min + 18 min|26 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0418/jobs/|
+| 2020-06-01 | 20 |737956|-|1.6 min|2.5 min + 26 min|35 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0417/jobs/|
+| 2020-05-21 | 11 |534313|-|1.2 min|1.9 min + 14 min|22 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0416/jobs/|
+| 2020-05-01 | 20 |741998|-|1.6 min|2.6 min + 18 min|27 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0413/jobs/|
+| 2020-04-21 | 5 |218519|-|43 s|59 s + 4.8 min|9 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0412/jobs/|
+| 2020-04-01 | 20 |526093|-|1.2 min|1.7 min + 6.7 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0406/jobs/|
+| 2020-02-01 | 20 |180126|-|32 s|54 s + 3.5 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0401/jobs/|
