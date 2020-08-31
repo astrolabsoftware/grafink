@@ -125,5 +125,11 @@ ingesting 10098333 + 35 vertices in total
 | 2020-05-21 | 11 |534313|-|1.2 min|1.9 min + 14 min|22 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0416/jobs/|
 | 2020-05-01 | 20 |741998|-|1.6 min|2.6 min + 18 min|27 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0413/jobs/|
 | 2020-04-21 | 5 |218519|-|43 s|59 s + 4.8 min|9 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0412/jobs/|
-| 2020-04-01 | 20 |526093|-|1.2 min|1.7 min + 6.7 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0406/jobs/|
-| 2020-02-01 | 20 |180126|-|32 s|54 s + 3.5 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0401/jobs/|
+| 2020-04-01 | 20 |526093|-|1.2 min|1.7 min + 6.7 min|13 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0406/jobs/|
+| 2020-02-01 | 20 |180126|-|32 s|54 s + 3.5 min|6.9 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0401/jobs/|
+| 2020-01-21 | 11 |148552|-|24 s|27 s + 3.4 min|6.4 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0400/jobs/|
+| 2020-01-01 | 20 |856603|-|1.8 min|2.6 min + 16 min|24 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0395/jobs/|
+| 2019-12-20 | 11 |119377|-|23 s|32 s + 2.9 min|5.7 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0394/jobs/|
+| 2019-12-01 | 20 |781954|-|1.6 min|2 min + 10 min|18 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0393/jobs/|
+| 2019-11-21 | 10 |437151|-|57 s|1.2 min + 3.9 min|8.6 min|0|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0392/jobs/|
+| 2019-11-01 | 20 |1078802|-|2.2 min|2.3 min + 6.6 min|16 min|1|https://wuip.lal.in2p3.fr:8443/history/d0b4e985-6627-438f-960d-d44284c2b70f-0391/jobs/|
