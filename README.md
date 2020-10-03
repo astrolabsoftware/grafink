@@ -493,6 +493,22 @@ similarityIndex                | similarity  | BOTH      | value          | asc 
 ## Grafink API
 Find detailed information about the API module and supported APIs [here](docs/API.md)
 
+## Credits
+This project would not have been possible without the outstanding work of the following projects:
+
+- [Ammonite-REPL](http://ammonite.io/): A modernized scala REPL, which provides the base for grafink-shell module.
+- [Apache Spark](https://spark.apache.org/): Unified Analytics Engine for Big Data, which is used for processing the data in grafink.
+- [Banana](https://github.com/yihleego/banana): A FIGlet utility for java, used to render startup logo in grafink-shell.
+- [circe](https://github.com/circe/circe): A JSON parsing library for scala, used by grafink-api module for serialization/deserialization of requests / response.
+- [FastParse](http://www.lihaoyi.com/fastparse/): A scala library for parsing strings into structured data, used by grafink to handle expressions of [SimilarityClassifier](docs/classifiers/VertexClassifiers.md#similarityclassifer).
+- [http4s](https://http4s.org/): A typeful, functional, streaming HTTP library for scala, used by grafink-api module.
+- [JanusGraph](https://janusgraph.org/): Scalable graph database optimized for storing and querying massive amounts of vertices and edges, used as the data sink for grafink jobs.
+- [Pureconfig](https://github.com/pureconfig/pureconfig): A scala library for loading configuration files, used by grafink to handle all its configuration.
+- [scala-csv](https://github.com/tototoshi/scala-csv): A scala library for parsing csv files, used by grafink to parse static data for [TwoModeClassifier](docs/classifiers/VertexClassifiers.md#twomodeclassifier).
+- [scopt](https://github.com/scopt/scopt): A scala library for constructing command line option parser, used by grafink to handle CLI options for the job.
+- [spark-daria](https://github.com/MrPowers/spark-daria): Spark helper methods, used by grafink for validation checks on dataframe column names.
+- [ZIO](https://zio.dev/): A zero dependency scala library for asynchronous, concurrent programming, used by zio for a clean, purely functional codebase.
+
 ## Benchmarks
 
 Some benchmarks are specified [here](docs/Benchmarks.md)
